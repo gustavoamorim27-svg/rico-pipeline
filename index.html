@@ -75,7 +75,8 @@ header{
 .sw svg{width:14px;height:14px;color:var(--muted);flex-shrink:0}
 .sw input{background:none;border:none;outline:none;color:var(--text);font-family:'Manrope';font-size:16px;width:100%}
 .sw input::placeholder{color:var(--muted)}
-.rchips{display:flex;gap:6px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.filters{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.rchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .rchips::-webkit-scrollbar{display:none}
 .rc{font-family:'Manrope';font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;background:rgba(255,255,255,.05);border:1px solid var(--line2);color:var(--muted2);padding:7px 12px;border-radius:999px;transition:all .13s;flex-shrink:0}
 .rc:hover:not([class*="on"]){background:rgba(255,255,255,.1)}
@@ -83,6 +84,7 @@ header{
 .rc.on-a{background:rgba(70,200,138,.2);color:var(--green);border-color:var(--green)}
 .rc.on-b{background:rgba(242,183,5,.2);color:var(--yellow);border-color:var(--yellow)}
 .rc.on-c{background:rgba(255,128,134,.18);color:var(--red);border-color:var(--red)}
+.rc.dc.on{background:var(--blue);color:#fff;border-color:transparent}
 
 .grid-wrap{flex:1;overflow:hidden;display:flex;min-height:0}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);width:100%;overflow:hidden}
@@ -214,7 +216,8 @@ header{
   .sumcell.s-all{display:block;min-width:154px;background:rgba(242,101,34,.06)}
   .toolbar{flex-wrap:wrap;padding:8px 14px;gap:8px;position:sticky;top:51px;z-index:30}
   .sw{flex:1 1 100%;order:2}
-  .rchips{order:1;margin-left:0;width:100%}
+  .filters{width:100%;order:1;margin-left:0;flex-direction:column;align-items:stretch;gap:6px}
+  .rchips{width:100%}
   .grid-wrap{overflow:visible;display:block;flex:none}
   .grid{display:block;width:100%}
   .col{border-right:none;border-bottom:8px solid var(--bg);overflow:visible}
@@ -275,11 +278,19 @@ header{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
     <input id="search" placeholder="Buscar cliente, ação ou nota…">
   </div>
-  <div class="rchips">
-    <div class="rc on-all" data-r="all">Todos</div>
-    <div class="rc" data-r="A">🔥 A · Quente</div>
-    <div class="rc" data-r="B">☀️ B · Morno</div>
-    <div class="rc" data-r="C">❄️ C · Frio</div>
+  <div class="filters">
+    <div class="rchips">
+      <div class="rc on-all" data-r="all">Todos</div>
+      <div class="rc" data-r="A">🔥 A · Quente</div>
+      <div class="rc" data-r="B">☀️ B · Morno</div>
+      <div class="rc" data-r="C">❄️ C · Frio</div>
+    </div>
+    <div class="rchips">
+      <div class="rc dc on" data-d="all">Todos os prazos</div>
+      <div class="rc dc" data-d="cw">📅 Semana atual</div>
+      <div class="rc dc" data-d="nw">Semana que vem</div>
+      <div class="rc dc" data-d="cm">Mês atual</div>
+    </div>
   </div>
 </div>
 
@@ -298,7 +309,7 @@ header{
     <div class="mbody">
       <div class="field full"><label>Cliente</label><input id="f-client" placeholder="Nome do cliente"></div>
       <div class="field"><label>Categoria</label><select id="f-cat"></select></div>
-      <div class="field" id="subtypeField" style="display:none"><label>Tipo de captação</label><select id="f-subtype"><option>Previdência</option><option>TED</option><option>STVM</option></select></div>
+      <div class="field" id="subtypeField" style="display:none"><label>Tipo de captação</label><select id="f-subtype"></select></div>
       <div class="field"><label>Estágio</label><select id="f-stage"></select></div>
       <div class="field full"><label>Nota de temperatura (0 = frio · 10 = fechando)</label><div class="np" id="notaPicker"></div></div>
       <div class="field"><label>Valor potencial (R$)</label><select id="f-value"></select></div>
@@ -343,7 +354,7 @@ const COLUMNS=[
   {id:'cross',cls:'cross',name:'Crossell',       cats:['seg','con'], mixed:true},
 ];
 const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão'];
-const SUBTYPES=['Previdência','TED','STVM'];
+const SUBTYPES=['Previdência','TED','STVM','PJ','Consultoria','Originação'];
 const NEXT_ACTIONS=['Enviar Proposta','Entrar em contato depois','Continuar Desenvolvendo','Marcar Reunião','Aguardar Resposta','Esperar Produto Porrada'];
 function valueRange(cat){
   if(cat==='seg')return[3000,5000,10000,15000,20000,30000,40000,50000,60000];
@@ -378,7 +389,7 @@ function loadHistSync(){
   return null;
 }
 
-let pipes=[], history=[], filterRank='all', q='', editId=null, selNota=5;
+let pipes=[], history=[], filterRank='all', filterDate='all', q='', editId=null, selNota=5;
 
 async function init(){
   let v=loadSync();
@@ -439,11 +450,23 @@ function fmtDate(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDat
 function fmtDateTime(iso){try{return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'2-digit'});}catch(e){return'';}}
 function overdue(s){if(!s)return false;return new Date(s+'T00:00:00')<new Date(new Date().toDateString());}
 function parseNum(s){return+(String(s).replace(/[^\d]/g,''))||0;}
+function weekStart(base){const d=new Date(base);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);d.setHours(0,0,0,0);return d;}
+function dateInRange(s,mode){
+  if(!s)return false;
+  const d=new Date(s+'T00:00:00');if(isNaN(d))return false;
+  const now=new Date();now.setHours(0,0,0,0);
+  if(mode==='cm')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+  const ws=weekStart(now);
+  if(mode==='cw'){const we=new Date(ws);we.setDate(ws.getDate()+7);return d>=ws&&d<we;}
+  if(mode==='nw'){const ns=new Date(ws);ns.setDate(ws.getDate()+7);const ne=new Date(ns);ne.setDate(ns.getDate()+7);return d>=ns&&d<ne;}
+  return true;
+}
 
 function visForCats(cats){
   return pipes.filter(p=>{
     if(!cats.includes(p.cat))return false;
     if(filterRank!=='all'&&rankOf(+p.nota)!==filterRank)return false;
+    if(filterDate!=='all'&&!dateInRange(p.date,filterDate))return false;
     if(q){const t=(p.client+' '+p.next+' '+p.notes+' '+(p.stage||'')+' '+(p.subtype||'')).toLowerCase();if(!t.includes(q.toLowerCase()))return false;}
     return true;
   });
@@ -613,7 +636,7 @@ function toggleSubtype(){document.getElementById('subtypeField').style.display=d
 function buildNextSelect(cur){
   const sel=document.getElementById('f-next');
   let opts=NEXT_ACTIONS.slice();
-  if(cur&&!opts.includes(cur))opts=[cur].concat(opts);   // preserva ação antiga
+  if(cur&&!opts.includes(cur))opts=[cur].concat(opts);
   sel.innerHTML=opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
   sel.value=cur||NEXT_ACTIONS[0];
 }
@@ -621,7 +644,7 @@ function buildValueSelect(cat,cur,preserve){
   const sel=document.getElementById('f-value');
   const vals=valueRange(cat); cur=+cur||0;
   let all=vals.slice();
-  if(preserve&&cur&&!vals.includes(cur)){all=[cur].concat(vals).sort((a,b)=>a-b);}  // preserva valor antigo
+  if(preserve&&cur&&!vals.includes(cur)){all=[cur].concat(vals).sort((a,b)=>a-b);}
   sel.innerHTML=all.map(v=>`<option value="${v}">${brlFull(v)}</option>`).join('');
   sel.value=String(all.includes(cur)?cur:vals[0]);
 }
@@ -748,8 +771,11 @@ function wire(){
   document.getElementById('histCloseBtn').onclick=closeHist;
   document.getElementById('histOverlay').onclick=e=>{if(e.target.id==='histOverlay')closeHist();};
   document.getElementById('search').oninput=e=>{q=e.target.value;renderGrid();};
-  document.querySelectorAll('.rc').forEach(chip=>{
-    chip.onclick=()=>{filterRank=chip.dataset.r;document.querySelectorAll('.rc').forEach(c=>{c.className='rc'+(c.dataset.r===filterRank?' on-'+(filterRank==='all'?'all':filterRank.toLowerCase()):'');});renderGrid();};
+  document.querySelectorAll('.rc[data-r]').forEach(chip=>{
+    chip.onclick=()=>{filterRank=chip.dataset.r;document.querySelectorAll('.rc[data-r]').forEach(c=>{c.className='rc'+(c.dataset.r===filterRank?' on-'+(filterRank==='all'?'all':filterRank.toLowerCase()):'');});renderGrid();};
+  });
+  document.querySelectorAll('.rc[data-d]').forEach(chip=>{
+    chip.onclick=()=>{filterDate=chip.dataset.d;document.querySelectorAll('.rc[data-d]').forEach(c=>c.classList.toggle('on',c.dataset.d===filterDate));renderGrid();};
   });
   document.getElementById('overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();}});
