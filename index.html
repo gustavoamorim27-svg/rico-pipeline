@@ -301,9 +301,9 @@ header{
       <div class="field" id="subtypeField" style="display:none"><label>Tipo de captação</label><select id="f-subtype"><option>Previdência</option><option>TED</option><option>STVM</option></select></div>
       <div class="field"><label>Estágio</label><select id="f-stage"></select></div>
       <div class="field full"><label>Nota de temperatura (0 = frio · 10 = fechando)</label><div class="np" id="notaPicker"></div></div>
-      <div class="field"><label>Valor potencial (R$)</label><input id="f-value" inputmode="numeric" placeholder="200.000"></div>
+      <div class="field"><label>Valor potencial (R$)</label><select id="f-value"></select></div>
       <div class="field"><label>Data prevista</label><input id="f-date" type="date"></div>
-      <div class="field full"><label>Próxima ação</label><input id="f-next" placeholder="Ex.: Enviar proposta"></div>
+      <div class="field full"><label>Próxima ação</label><select id="f-next"></select></div>
       <div class="field full"><label>Notas</label><textarea id="f-notes" placeholder="Perfil, contexto, objeções…"></textarea></div>
     </div>
     <div class="mfoot">
@@ -344,6 +344,12 @@ const COLUMNS=[
 ];
 const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão'];
 const SUBTYPES=['Previdência','TED','STVM'];
+const NEXT_ACTIONS=['Enviar Proposta','Entrar em contato depois','Continuar Desenvolvendo','Marcar Reunião','Aguardar Resposta','Esperar Produto Porrada'];
+function valueRange(cat){
+  if(cat==='seg')return[3000,5000,10000,15000,20000,30000,40000,50000,60000];
+  if(cat==='con')return[100000,150000,200000,300000,500000,750000,1000000,1500000,2000000,2500000,3000000];
+  return[30000,40000,50000,60000,70000,80000,90000,100000];
+}
 
 /* ════════ PERSISTÊNCIA BLINDADA (pipes + histórico) ════════ */
 const STORE='ricoPipeline.v4', BACKUP='ricoPipeline.backup';
@@ -381,7 +387,7 @@ async function init(){
   let h=loadHistSync();
   if(h===null){const ih=await idbGet('history');h=ih||[];}
   pipes=v; history=h||[];
-  migrateClosed();        // pipes Ganho/Perdido antigos vão para o Histórico
+  migrateClosed();
   persist();
   fillSelects();render();wire();
 }
@@ -409,15 +415,15 @@ function persist(){
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);}
 function inDays(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
 function seed(){return[
-  {id:uid(),client:'Marina Albuquerque',cat:'ag', nota:9, value:200000,stage:'Negociação',         next:'Apresentar proposta de carteira',   date:inDays(3), notes:'Resgatou CDB no banco. Perfil moderado.'},
-  {id:uid(),client:'Carlos Teixeira',   cat:'ag', nota:6, value:80000, stage:'Proposta enviada',   next:'Comparativo PGBL x VGBL',          date:inDays(6), notes:'Declara IR completo, foco em dedução.'},
-  {id:uid(),client:'Família Nogueira',  cat:'con',nota:4, value:350000,stage:'Em análise',          next:'Simular carta de R$ 350k',         date:inDays(10),notes:'Troca de imóvel em 18 meses.'},
-  {id:uid(),client:'Roberto Lima',      cat:'rv', nota:3, value:120000,stage:'Primeiro contato',    next:'Sondar apetite p/ proteção',       date:inDays(14),notes:'Concentrado em PETR4.'},
-  {id:uid(),client:'Pedro Cavalcanti',  cat:'cap',nota:7, value:500000,stage:'Aguardando decisão',  next:'Follow-up após reunião de sócios', date:inDays(5), notes:'Empresa familiar, 3 sócios.',subtype:'TED'},
-  {id:uid(),client:'Juliana Rezende',   cat:'rv', nota:8, value:90000, stage:'Negociação',          next:'Enviar tese VALE3 + hedge cambial',date:inDays(2), notes:'Quer aumentar exposição internacional.'},
-  {id:uid(),client:'Marcos Andrade',    cat:'cap',nota:5, value:300000,stage:'Em análise',          next:'Apresentar relatório de captação', date:inDays(7), notes:'Herdeiro de empresa familiar.',subtype:'STVM'},
-  {id:uid(),client:'Beatriz Lemos',     cat:'rv', nota:7, value:65000, stage:'Proposta enviada',    next:'Discutir alocação em BDRs',        date:inDays(4), notes:'Tem conta no BTG também.'},
-  {id:uid(),client:'Helena Castro',     cat:'seg',nota:8, value:36000, stage:'Negociação',          next:'Fechar seguro de vida',            date:inDays(3), notes:'Dois filhos, busca proteção familiar.'},
+  {id:uid(),client:'Marina Albuquerque',cat:'ag', nota:9, value:90000, stage:'Negociação',         next:'Marcar Reunião',          date:inDays(3), notes:'Resgatou CDB no banco. Perfil moderado.'},
+  {id:uid(),client:'Carlos Teixeira',   cat:'ag', nota:6, value:80000, stage:'Proposta enviada',   next:'Enviar Proposta',         date:inDays(6), notes:'Declara IR completo, foco em dedução.'},
+  {id:uid(),client:'Família Nogueira',  cat:'con',nota:4, value:350000,stage:'Em análise',          next:'Continuar Desenvolvendo', date:inDays(10),notes:'Troca de imóvel em 18 meses.'},
+  {id:uid(),client:'Roberto Lima',      cat:'rv', nota:3, value:60000, stage:'Primeiro contato',    next:'Entrar em contato depois',date:inDays(14),notes:'Concentrado em PETR4.'},
+  {id:uid(),client:'Pedro Cavalcanti',  cat:'cap',nota:7, value:90000, stage:'Aguardando decisão',  next:'Aguardar Resposta',       date:inDays(5), notes:'Empresa familiar, 3 sócios.',subtype:'TED'},
+  {id:uid(),client:'Juliana Rezende',   cat:'rv', nota:8, value:90000, stage:'Negociação',          next:'Enviar Proposta',         date:inDays(2), notes:'Quer aumentar exposição internacional.'},
+  {id:uid(),client:'Marcos Andrade',    cat:'cap',nota:5, value:100000,stage:'Em análise',          next:'Continuar Desenvolvendo', date:inDays(7), notes:'Herdeiro de empresa familiar.',subtype:'STVM'},
+  {id:uid(),client:'Beatriz Lemos',     cat:'rv', nota:7, value:65000, stage:'Proposta enviada',    next:'Marcar Reunião',          date:inDays(4), notes:'Tem conta no BTG também.'},
+  {id:uid(),client:'Helena Castro',     cat:'seg',nota:8, value:30000, stage:'Negociação',          next:'Enviar Proposta',         date:inDays(3), notes:'Dois filhos, busca proteção familiar.'},
 ];}
 
 const rankOf=n=>n>=8?'A':n>=5?'B':'C';
@@ -563,7 +569,7 @@ function attachCard(card){
       if(out)closePipe(id,out);
     }else{
       started=false;
-      if(allow&&!moved)openModal(id);   // toque/clique simples = abrir
+      if(allow&&!moved)openModal(id);
     }
   }
   card.addEventListener('pointerdown',ev=>{
@@ -604,6 +610,25 @@ function fillSelects(){
   document.getElementById('f-subtype').innerHTML=SUBTYPES.map(s=>`<option>${s}</option>`).join('');
 }
 function toggleSubtype(){document.getElementById('subtypeField').style.display=document.getElementById('f-cat').value==='cap'?'flex':'none';}
+function buildNextSelect(cur){
+  const sel=document.getElementById('f-next');
+  let opts=NEXT_ACTIONS.slice();
+  if(cur&&!opts.includes(cur))opts=[cur].concat(opts);   // preserva ação antiga
+  sel.innerHTML=opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  sel.value=cur||NEXT_ACTIONS[0];
+}
+function buildValueSelect(cat,cur,preserve){
+  const sel=document.getElementById('f-value');
+  const vals=valueRange(cat); cur=+cur||0;
+  let all=vals.slice();
+  if(preserve&&cur&&!vals.includes(cur)){all=[cur].concat(vals).sort((a,b)=>a-b);}  // preserva valor antigo
+  sel.innerHTML=all.map(v=>`<option value="${v}">${brlFull(v)}</option>`).join('');
+  sel.value=String(all.includes(cur)?cur:vals[0]);
+}
+function onCatChange(){
+  toggleSubtype();
+  buildValueSelect(document.getElementById('f-cat').value, +document.getElementById('f-value').value||0, false);
+}
 function openModal(id,presetCat){
   editId=id||null;
   const p=id?pipes.find(x=>x.id===id):{};
@@ -614,9 +639,9 @@ function openModal(id,presetCat){
   document.getElementById('f-subtype').value=p.subtype||'Previdência';
   document.getElementById('f-stage').value=p.stage||'Primeiro contato';
   buildNP(p.nota==null?5:p.nota);
-  document.getElementById('f-value').value=p.value?(+p.value).toLocaleString('pt-BR'):'';
+  buildNextSelect(p.next);
+  buildValueSelect(document.getElementById('f-cat').value, p.value, true);
   document.getElementById('f-date').value=p.date||'';
-  document.getElementById('f-next').value=p.next||'';
   document.getElementById('f-notes').value=p.notes||'';
   toggleSubtype();
   document.getElementById('overlay').classList.add('open');
@@ -630,7 +655,7 @@ function saveModal(){
   const data={client,cat,stage:document.getElementById('f-stage').value,
     subtype:cat==='cap'?document.getElementById('f-subtype').value:'',
     nota:selNota,value:parseNum(document.getElementById('f-value').value),
-    date:document.getElementById('f-date').value,next:document.getElementById('f-next').value.trim(),
+    date:document.getElementById('f-date').value,next:document.getElementById('f-next').value,
     notes:document.getElementById('f-notes').value.trim()};
   if(editId){Object.assign(pipes.find(x=>x.id===editId),data);}
   else{pipes.unshift(Object.assign({id:uid()},data));}
@@ -713,7 +738,7 @@ function wire(){
   document.getElementById('btnClose').onclick=closeModal;
   document.getElementById('btnCancel').onclick=closeModal;
   document.getElementById('btnSave').onclick=saveModal;
-  document.getElementById('f-cat').onchange=toggleSubtype;
+  document.getElementById('f-cat').onchange=onCatChange;
   document.getElementById('btnDel').onclick=()=>{if(editId&&confirm('Excluir este pipe definitivamente?')){pipes=pipes.filter(x=>x.id!==editId);persist();render();closeModal();}};
   document.getElementById('btnExport').onclick=doExport;
   document.getElementById('btnImport').onclick=()=>document.getElementById('importFile').click();
