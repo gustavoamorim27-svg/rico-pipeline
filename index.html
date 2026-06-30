@@ -138,14 +138,16 @@ header{
 
 /* drag clone + dropzones */
 .drag-clone{position:fixed;z-index:120;pointer-events:none;opacity:.96;transform:rotate(-1.5deg) scale(1.03);box-shadow:0 18px 40px rgba(0,0,0,.55);margin:0!important}
-.dropzones{position:fixed;left:0;right:0;bottom:calc(18px + var(--safe-b));display:flex;gap:14px;justify-content:center;z-index:110;pointer-events:none;opacity:0;transform:translateY(24px);transition:opacity .18s,transform .18s;padding:0 16px}
+.dropzones{position:fixed;left:0;right:0;bottom:calc(18px + var(--safe-b));display:flex;gap:10px;justify-content:center;z-index:110;pointer-events:none;opacity:0;transform:translateY(24px);transition:opacity .18s,transform .18s;padding:0 12px}
 .dropzones.show{opacity:1;transform:translateY(0)}
-.dz{flex:0 0 auto;width:150px;max-width:42vw;height:84px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:800;font-family:'Sora';font-size:13px;border:2px dashed;background:rgba(10,14,40,.92);backdrop-filter:blur(6px);transition:transform .12s,background .12s;touch-action:none}
-.dz .dz-ic{font-size:26px;line-height:1}
+.dz{flex:1 1 0;min-width:92px;max-width:168px;height:84px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:800;font-family:'Sora';font-size:13px;border:2px dashed;background:rgba(10,14,40,.92);backdrop-filter:blur(6px);transition:transform .12s,background .12s;touch-action:none;text-align:center;padding:0 4px}
+.dz .dz-ic{font-size:24px;line-height:1}
 .dz.win{border-color:var(--green);color:var(--green)}
 .dz.lost{border-color:var(--red);color:var(--red)}
+.dz.snz{border-color:var(--blue);color:var(--blue)}
 .dz.win.hot{background:rgba(70,200,138,.28);transform:scale(1.08)}
 .dz.lost.hot{background:rgba(255,128,134,.26);transform:scale(1.08)}
+.dz.snz.hot{background:rgba(91,141,239,.26);transform:scale(1.08)}
 
 /* modal */
 .overlay{position:fixed;inset:0;background:rgba(4,7,28,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:16px;z-index:70}
@@ -192,6 +194,10 @@ header{
 .hi-act button.reopen:hover{color:var(--green);border-color:var(--green)}
 .hi-act button.del:hover{color:var(--red);border-color:var(--red)}
 .hist-empty{padding:30px 16px;text-align:center;color:var(--muted);font-style:italic;font-size:13px}
+.hi-out.arch{background:rgba(91,141,239,.16)}
+.snz-presets{display:flex;flex-wrap:wrap;gap:6px}
+.snz-presets button{font-family:'Manrope';font-weight:700;font-size:12px;cursor:pointer;border-radius:8px;padding:9px 12px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--muted2)}
+.snz-presets button:hover{border-color:var(--blue);color:var(--blue)}
 
 .toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:130;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -299,6 +305,7 @@ header{
 <!-- drop zones -->
 <div class="dropzones" id="dropzones">
   <div class="dz win" data-out="Ganho"><div class="dz-ic">🏆</div><div>Ganhei</div></div>
+  <div class="dz snz" data-out="snooze"><div class="dz-ic">💤</div><div>Arquivar até</div></div>
   <div class="dz lost" data-out="Perdido"><div class="dz-ic">🗑️</div><div>Perdido</div></div>
 </div>
 
@@ -334,6 +341,24 @@ header{
   </div>
 </div>
 
+<!-- modal arquivar -->
+<div class="overlay" id="snoozeOverlay">
+  <div class="modal" style="max-width:380px">
+    <div class="mhead"><h2>💤 Arquivar até…</h2><button class="xbtn" id="snzClose">&times;</button></div>
+    <div class="mbody" style="grid-template-columns:1fr">
+      <div class="field full"><label>Reaparece no quadro em</label><input id="snzDate" type="date"></div>
+      <div class="field full"><div class="snz-presets">
+        <button data-add="7">+1 semana</button>
+        <button data-add="30">+1 mês</button>
+        <button data-add="90">+3 meses</button>
+        <button data-add="180">+6 meses</button>
+        <button data-add="365">+1 ano</button>
+      </div></div>
+    </div>
+    <div class="mfoot"><div class="right"><button class="btn btn-ghost" id="snzCancel">Cancelar</button><button class="btn btn-primary" id="snzSave">Arquivar</button></div></div>
+  </div>
+</div>
+
 <input type="file" id="importFile" accept="application/json,.json" style="display:none">
 <div class="toast" id="toast"></div>
 
@@ -353,13 +378,13 @@ const COLUMNS=[
   {id:'cap',  cls:'cap',  name:'Captação',       cats:['cap']},
   {id:'cross',cls:'cross',name:'Crossell',       cats:['seg','con'], mixed:true},
 ];
-const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão'];
+const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão','Aceito falta push'];
 const SUBTYPES=['Previdência','TED','STVM','PJ','Consultoria','Originação'];
 const NEXT_ACTIONS=['Enviar Proposta','Entrar em contato depois','Continuar Desenvolvendo','Marcar Reunião','Aguardar Resposta','Esperar Produto Porrada'];
 function valueRange(cat){
   if(cat==='seg')return[3000,5000,10000,15000,20000,30000,40000,50000,60000];
   if(cat==='con')return[100000,150000,200000,300000,500000,750000,1000000,1500000,2000000,2500000,3000000];
-  if(cat==='cap')return[30000,40000,50000,60000,70000,80000,90000,100000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
+  if(cat==='cap')return[50000,60000,70000,80000,90000,100000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
   return[30000,40000,50000,60000,70000,80000,90000,100000,150000,200000,250000,300000,350000,400000,450000,500000];
 }
 
@@ -475,6 +500,7 @@ function sortPipes(arr){
 function visForCats(cats){
   return sortPipes(pipes.filter(p=>{
     if(!cats.includes(p.cat))return false;
+    if(isSnoozed(p))return false;
     if(filterRank!=='all'&&rankOf(+p.nota)!==filterRank)return false;
     if(filterDate!=='all'&&!dateInRange(p.date,filterDate))return false;
     if(q){const t=(p.client+' '+p.next+' '+p.notes+' '+(p.stage||'')+' '+(p.subtype||'')).toLowerCase();if(!t.includes(q.toLowerCase()))return false;}
@@ -485,16 +511,18 @@ function visForCats(cats){
 /* ── render ── */
 function wonStats(){const w=history.filter(h=>h.outcome==='Ganho');return{n:w.length,sum:w.reduce((a,p)=>a+(+p.value||0),0)};}
 function renderHeaderTotal(){
-  const tot=pipes.reduce((a,p)=>a+(+p.value||0),0);
+  const act=pipes.filter(p=>!isSnoozed(p));
+  const tot=act.reduce((a,p)=>a+(+p.value||0),0);
   const w=wonStats();
-  document.getElementById('htotal').innerHTML=`<span class="ht-v">${brl(tot)}</span><span class="ht-s">${pipes.length} em aberto · ${w.n} ganhos · ${brl(w.sum)}</span>`;
+  document.getElementById('htotal').innerHTML=`<span class="ht-v">${brl(tot)}</span><span class="ht-s">${act.length} em aberto · ${w.n} ganhos · ${brl(w.sum)}</span>`;
 }
 function renderSumbar(){
-  const tot=pipes.reduce((a,p)=>a+(+p.value||0),0);
+  const act=pipes.filter(p=>!isSnoozed(p));
+  const tot=act.reduce((a,p)=>a+(+p.value||0),0);
   const w=wonStats();
-  let h=`<div class="sumcell s-all"><span class="sl">Total pipeline</span><span class="sv">${brl(tot)}</span><span class="ss">${pipes.length} em aberto · ${w.n} ganhos</span></div>`;
+  let h=`<div class="sumcell s-all"><span class="sl">Total pipeline</span><span class="sv">${brl(tot)}</span><span class="ss">${act.length} em aberto · ${w.n} ganhos</span></div>`;
   COLUMNS.forEach(col=>{
-    const items=pipes.filter(p=>col.cats.includes(p.cat));
+    const items=act.filter(p=>col.cats.includes(p.cat));
     const sum=items.reduce((a,p)=>a+(+p.value||0),0);
     let sub='';
     if(col.mixed){const seg=items.filter(p=>p.cat==='seg').length,con=items.filter(p=>p.cat==='con').length;sub=`${seg} seg · ${con} cons`;}
@@ -599,7 +627,8 @@ function attachCard(card){
       document.body.classList.remove('dragging');
       document.getElementById('dropzones').classList.remove('show');
       clearZones();drag=null;started=false;
-      if(out)closePipe(id,out);
+      if(out==='snooze')openSnooze(id);
+      else if(out)closePipe(id,out);
     }else{
       started=false;
       if(allow&&!moved)openModal(id);
@@ -623,6 +652,12 @@ function closePipe(id,outcome){
   persist();render();
   toast(outcome==='Ganho'?'🏆 Ganho! Salvo no Histórico':'Movido para Perdidos');
 }
+function isSnoozed(p){if(!p.snoozeUntil)return false;const d=new Date(p.snoozeUntil+'T00:00:00');return !isNaN(d)&&d>new Date(new Date().toDateString());}
+let snoozeId=null;
+function openSnooze(id){snoozeId=id;const d=new Date();d.setDate(d.getDate()+30);document.getElementById('snzDate').value=d.toISOString().slice(0,10);document.getElementById('snoozeOverlay').classList.add('open');}
+function closeSnooze(){document.getElementById('snoozeOverlay').classList.remove('open');}
+function snoozeSave(){const date=document.getElementById('snzDate').value;if(!date){document.getElementById('snzDate').focus();return;}const p=pipes.find(x=>x.id===snoozeId);if(p){p.snoozeUntil=date;persist();render();toast('Arquivado até '+fmtDate(date));}closeSnooze();}
+function reactivate(id){const p=pipes.find(x=>x.id===id);if(!p)return;delete p.snoozeUntil;persist();renderHist();render();toast('Pipe reativado no quadro');}
 
 /* ── nota picker ── */
 function buildNP(val){
@@ -701,13 +736,26 @@ function openHist(){renderHist();document.getElementById('histOverlay').classLis
 function closeHist(){document.getElementById('histOverlay').classList.remove('open');}
 function renderHist(){
   const won=history.filter(h=>h.outcome==='Ganho'),lost=history.filter(h=>h.outcome==='Perdido');
+  const arch=pipes.filter(isSnoozed).slice().sort((a,b)=>Date.parse(a.snoozeUntil)-Date.parse(b.snoozeUntil));
   const ws=won.reduce((a,p)=>a+(+p.value||0),0),ls=lost.reduce((a,p)=>a+(+p.value||0),0);
   document.getElementById('histSum').innerHTML=
     `<div class="hs"><div class="l">🏆 Ganhos</div><div class="v" style="color:var(--green)">${brl(ws)}</div><div class="l" style="margin-top:2px">${won.length} pipe(s)</div></div>
-     <div class="hs"><div class="l">🗑️ Perdidos</div><div class="v" style="color:var(--red)">${brl(ls)}</div><div class="l" style="margin-top:2px">${lost.length} pipe(s)</div></div>`;
+     <div class="hs"><div class="l">🗑️ Perdidos</div><div class="v" style="color:var(--red)">${brl(ls)}</div><div class="l" style="margin-top:2px">${lost.length} pipe(s)</div></div>
+     <div class="hs"><div class="l">💤 Arquivados</div><div class="v" style="color:var(--blue)">${arch.length}</div><div class="l" style="margin-top:2px">aguardando</div></div>`;
   const list=document.getElementById('histList');
-  if(!history.length){list.innerHTML='<div class="hist-empty">Nada no histórico ainda. Arraste um pipe para 🏆 ou 🗑️.</div>';return;}
-  list.innerHTML=history.map(h=>{
+  if(!history.length&&!arch.length){list.innerHTML='<div class="hist-empty">Nada aqui ainda. Arraste um pipe para 🏆, 💤 ou 🗑️.</div>';return;}
+  let html=arch.map(p=>{
+    const cat=catById(p.cat);
+    return `<div class="hitem" data-aid="${p.id}">
+      <div class="hi-main">
+        <div class="hi-out arch">💤</div>
+        <div><div class="hi-client">${esc(p.client)}</div>
+        <div class="hi-meta">${cat.name} · ${brlFull(p.value)} · volta em ${fmtDate(p.snoozeUntil)}</div></div>
+      </div>
+      <div class="hi-act"><button class="reopen" data-act="react">Reativar</button></div>
+    </div>`;
+  }).join('');
+  html+=history.map(h=>{
     const cat=catById(h.cat);
     return `<div class="hitem" data-id="${h.id}">
       <div class="hi-main">
@@ -718,7 +766,9 @@ function renderHist(){
       <div class="hi-act"><button class="reopen" data-act="reopen">Reabrir</button><button class="del" data-act="del">Excluir</button></div>
     </div>`;
   }).join('');
-  list.querySelectorAll('.hitem').forEach(it=>{
+  list.innerHTML=html;
+  list.querySelectorAll('[data-aid]').forEach(it=>{it.querySelector('[data-act=react]').onclick=()=>reactivate(it.dataset.aid);});
+  list.querySelectorAll('[data-id]').forEach(it=>{
     const id=it.dataset.id;
     it.querySelector('[data-act=reopen]').onclick=()=>reopenHist(id);
     it.querySelector('[data-act=del]').onclick=()=>delHist(id);
@@ -745,7 +795,7 @@ function doExport(){
   a.download='rico-pipeline-'+new Date().toISOString().slice(0,10)+'.json';a.click();
   toast('Backup baixado ✓');
 }
-function normPipe(p){return{id:p.id||uid(),client:p.client||'',cat:p.cat||'rv',stage:p.stage||'Primeiro contato',subtype:p.subtype||'',nota:+p.nota||0,value:+p.value||0,date:p.date||'',next:p.next||'',notes:p.notes||'',outcome:p.outcome,closedAt:p.closedAt};}
+function normPipe(p){return{id:p.id||uid(),client:p.client||'',cat:p.cat||'rv',stage:p.stage||'Primeiro contato',subtype:p.subtype||'',nota:+p.nota||0,value:+p.value||0,date:p.date||'',next:p.next||'',notes:p.notes||'',snoozeUntil:p.snoozeUntil,outcome:p.outcome,closedAt:p.closedAt};}
 function doImport(file){
   const rd=new FileReader();
   rd.onload=()=>{
@@ -788,7 +838,12 @@ function wire(){
     chip.onclick=()=>{filterDate=chip.dataset.d;document.querySelectorAll('.rc[data-d]').forEach(c=>c.classList.toggle('on',c.dataset.d===filterDate));renderGrid();};
   });
   document.getElementById('overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();}});
+  document.getElementById('snzClose').onclick=closeSnooze;
+  document.getElementById('snzCancel').onclick=closeSnooze;
+  document.getElementById('snzSave').onclick=snoozeSave;
+  document.getElementById('snoozeOverlay').onclick=e=>{if(e.target.id==='snoozeOverlay')closeSnooze();};
+  document.querySelectorAll('.snz-presets button').forEach(b=>{b.onclick=()=>{const dd=new Date();dd.setDate(dd.getDate()+(+b.dataset.add));document.getElementById('snzDate').value=dd.toISOString().slice(0,10);};});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();closeSnooze();}});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();});
   window.addEventListener('pagehide',persist);
 }
