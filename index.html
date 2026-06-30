@@ -462,14 +462,23 @@ function dateInRange(s,mode){
   return true;
 }
 
+function sortPipes(arr){
+  return arr.sort((a,b)=>{
+    const na=+a.nota||0, nb=+b.nota||0;
+    if(nb!==na)return nb-na;                              // mais quente no topo
+    const da=a.date?new Date(a.date+'T00:00:00').getTime():Infinity;
+    const db=b.date?new Date(b.date+'T00:00:00').getTime():Infinity;
+    return da-db;                                        // prazo mais proximo no topo; sem data por ultimo
+  });
+}
 function visForCats(cats){
-  return pipes.filter(p=>{
+  return sortPipes(pipes.filter(p=>{
     if(!cats.includes(p.cat))return false;
     if(filterRank!=='all'&&rankOf(+p.nota)!==filterRank)return false;
     if(filterDate!=='all'&&!dateInRange(p.date,filterDate))return false;
     if(q){const t=(p.client+' '+p.next+' '+p.notes+' '+(p.stage||'')+' '+(p.subtype||'')).toLowerCase();if(!t.includes(q.toLowerCase()))return false;}
     return true;
-  });
+  }));
 }
 
 /* ── render ── */
