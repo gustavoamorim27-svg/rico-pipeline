@@ -234,6 +234,74 @@ header{
 @media (max-width:720px){
   .dash-editrow input{width:130px}
 }
+
+/* DASHBOARD COMO PAGINA COMPLETA */
+body.view-dash .sumbar,
+body.view-dash .toolbar,
+body.view-dash .grid-wrap,
+body.view-dash .dropzones{display:none!important}
+#dashPage{display:none}
+body.view-dash #dashPage{display:flex}
+.dashpage{flex:1;flex-direction:column;min-height:0;overflow:hidden;background:var(--bg)}
+.dp-top{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--bg2);flex-wrap:wrap}
+.dp-back{font-family:'Manrope';font-weight:700;font-size:13px;border:1px solid var(--line2);background:rgba(255,255,255,.06);color:var(--muted2);cursor:pointer;border-radius:8px;padding:9px 14px;display:inline-flex;align-items:center;gap:6px}
+.dp-back:hover{background:rgba(255,255,255,.1);color:#fff}
+.dp-title{font-family:'Sora';font-weight:800;font-size:18px;letter-spacing:-.3px}
+.dp-title .dp-sub{display:block;font-family:'Manrope';font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.mnav{display:flex;align-items:center;gap:6px;margin-left:auto;background:rgba(0,0,0,.35);border:1px solid var(--line2);border-radius:10px;padding:4px}
+.mnav button{width:32px;height:32px;border-radius:7px;border:none;background:rgba(255,255,255,.05);color:var(--muted2);font-size:17px;font-weight:800;cursor:pointer;display:grid;place-items:center;line-height:1}
+.mnav button:hover{background:rgba(255,255,255,.12);color:#fff}
+.mnav .mnav-lbl{font-family:'Sora';font-weight:700;font-size:13px;min-width:118px;text-align:center;text-transform:capitalize}
+.mnav .mnav-today{width:auto;padding:0 10px;font-family:'Manrope';font-weight:700;font-size:11px}
+.dp-edit{font-family:'Manrope';font-weight:700;font-size:13px;border:1px solid var(--line2);background:rgba(255,255,255,.06);color:var(--muted2);cursor:pointer;border-radius:8px;padding:9px 14px}
+.dp-edit:hover{background:rgba(255,255,255,.1);color:#fff}
+.dp-body{flex:1;overflow-y:auto;padding:18px 20px calc(28px + var(--safe-b));scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.dp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;max-width:1180px;margin:0 auto}
+.scard{border:1px solid var(--line2);border-left-width:4px;border-radius:14px;padding:16px 16px 14px;background:linear-gradient(165deg,var(--panel),var(--bg2))}
+.sc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:4px}
+.sc-name{display:flex;align-items:center;gap:9px;font-family:'Sora';font-weight:700;font-size:15px;min-width:0}
+.sc-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.sc-meta{font-family:'Sora';font-weight:700;font-size:12.5px;color:var(--muted2);flex-shrink:0}
+.sc-meta b{color:#fff;font-weight:800}
+.sc-real{font-size:12px;color:var(--muted2);margin-bottom:12px}
+.sc-real b{font-family:'Sora';color:#fff}
+.sc-real .rp{font-weight:800}
+.sc-bar{position:relative;height:20px;border-radius:10px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:6px}
+.sc-seg{position:absolute;top:0;bottom:0}
+.sc-seg.real{left:0;z-index:4}
+.sc-seg.a{z-index:3;opacity:.72}
+.sc-seg.b{z-index:2;opacity:.5}
+.sc-seg.c{z-index:1;opacity:.3}
+.sc-goal{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;opacity:.85;z-index:6}
+.sc-goal::after{content:"META";position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;letter-spacing:.5px;color:var(--muted2);white-space:nowrap}
+.sc-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:13px;font-size:10px;color:var(--muted);font-weight:600}
+.sc-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.sc-lg-sw{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.sc-scen{display:flex;flex-direction:column;gap:7px}
+.sc-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.sc-row.hit{background:rgba(70,200,138,.12);border-color:rgba(70,200,138,.4)}
+.sc-row-ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:13px;flex-shrink:0}
+.sc-row-lbl{display:flex;flex-direction:column;min-width:0;flex:1}
+.sc-row-lbl .l1{font-family:'Sora';font-weight:700;font-size:12.5px;line-height:1.2}
+.sc-row-lbl .l2{font-size:10px;color:var(--muted);margin-top:1px}
+.sc-row-val{text-align:right;flex-shrink:0}
+.sc-row-val .v1{font-family:'Sora';font-weight:800;font-size:13.5px;line-height:1.15}
+.sc-row-val .v2{font-size:11px;font-weight:700;color:var(--muted2)}
+.sc-row.hit .sc-row-val .v2,.sc-row.hit .sc-row-val .v1{color:var(--green)}
+.sc-row-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--green);background:rgba(70,200,138,.2);padding:2px 6px;border-radius:5px;flex-shrink:0}
+.dp-empty{max-width:1180px;margin:40px auto;text-align:center;color:var(--muted);font-style:italic}
+@media (max-width:720px){
+  body.view-dash #dashPage{display:block}
+  .dashpage{overflow:visible}
+  .dp-top{position:sticky;top:0;z-index:20;padding:12px 14px;gap:8px}
+  .dp-body{overflow:visible;flex:none;padding:14px}
+  .dp-title{font-size:16px;order:1}
+  .dp-back{order:0}
+  .mnav{order:3;width:100%;margin-left:0;justify-content:space-between}
+  .dp-edit{order:2;margin-left:auto}
+  .mnav .mnav-lbl{min-width:0;flex:1}
+  .dp-grid{grid-template-columns:1fr;gap:13px}
+}
 .toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:130;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -341,6 +409,25 @@ header{
 
 <div class="grid-wrap"><div class="grid" id="grid"></div></div>
 
+<!-- pagina completa: Dashboard de Metas com 3 cenarios -->
+<div class="dashpage" id="dashPage">
+  <div class="dp-top">
+    <button class="dp-back" id="dashBack">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      Board
+    </button>
+    <div class="dp-title">Metas do mes<span class="dp-sub">Projecao por cenario</span></div>
+    <div class="mnav">
+      <button id="dashPrev" title="Mes anterior">&lsaquo;</button>
+      <span class="mnav-lbl" id="dashMonthLbl">&mdash;</span>
+      <button id="dashNext" title="Proximo mes">&rsaquo;</button>
+      <button class="mnav-today" id="dashToday" title="Voltar ao mes atual">Hoje</button>
+    </div>
+    <button class="dp-edit" id="dashEditToggle">&#9998; Editar metas</button>
+  </div>
+  <div class="dp-body"><div id="dashBody"></div></div>
+</div>
+
 <!-- drop zones -->
 <div class="dropzones" id="dropzones">
   <div class="dz win" data-out="Ganho"><div class="dz-ic">🏆</div><div>Ganhei</div></div>
@@ -377,18 +464,6 @@ header{
     <div class="hsum" id="histSum"></div>
     <div class="histlist" id="histList"></div>
     <div class="mfoot"><div class="right"><button class="btn btn-ghost" id="histCloseBtn">Fechar</button></div></div>
-  </div>
-</div>
-
-<!-- modal dashboard de metas -->
-<div class="overlay" id="dashOverlay">
-  <div class="modal dash-modal">
-    <div class="mhead"><h2 id="dashTitle">Metas do mês</h2><button class="xbtn" id="dashClose">&times;</button></div>
-    <div class="dash-body" id="dashBody"></div>
-    <div class="mfoot">
-      <button class="delbtn" id="dashEditToggle" style="color:var(--muted2)">✎ Editar metas</button>
-      <div class="right"><button class="btn btn-ghost" id="dashCloseBtn">Fechar</button></div>
-    </div>
   </div>
 </div>
 
@@ -848,10 +923,13 @@ function reopenHist(id){
 }
 function delHist(id){if(!confirm('Excluir este registro do histórico?'))return;history=history.filter(h=>h.id!==id);persist();renderHist();render();}
 
-/* ════════ DASHBOARD DE METAS (mensal · v1) ════════ */
+/* DASHBOARD DE METAS - PAGINA COM 3 CENARIOS */
 const GOALS_KEY='ricoPipeline.goals';
 const DEFAULT_GOALS={cap:800000, aloc:1700000, rv:300000, seg:15000, con:200000};
 let goals=Object.assign({},DEFAULT_GOALS), dashEditing=false;
+/* estado da pagina: view ('board'|'dash') e mes selecionado (ano/mes 0-11) */
+let view='board';
+let dashY=new Date().getFullYear(), dashM=new Date().getMonth();
 
 function loadGoals(){
   try{
@@ -865,25 +943,35 @@ function loadGoals(){
 }
 function saveGoals(){try{localStorage.setItem(GOALS_KEY,JSON.stringify(goals));}catch(e){}}
 
-/* soma value de um array filtrando por categorias e por um predicado de data */
-function sumByCats(arr,cats,dateFn){
+/* soma value de um array filtrando por categorias e por um predicado */
+function sumByCats(arr,cats,fn){
   try{
     return (arr||[]).reduce((a,p)=>{
       if(!p||!cats.includes(p.cat))return a;
-      if(dateFn&&!dateFn(p))return a;
+      if(fn&&!fn(p))return a;
       return a+(+p.value||0);
     },0);
   }catch(e){return 0;}
 }
-function isCurMonthISO(iso){ // closedAt timestamp ISO
-  try{const d=new Date(iso);if(isNaN(d))return false;const n=new Date();return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth();}catch(e){return false;}
+/* pertence ao mes/ano selecionado? - ISO (closedAt) ou 'YYYY-MM-DD' (date) */
+function inSelMonthISO(iso){try{const d=new Date(iso);if(isNaN(d))return false;return d.getFullYear()===dashY&&d.getMonth()===dashM;}catch(e){return false;}}
+function inSelMonthDate(s){try{if(!s)return false;const d=new Date(s+'T00:00:00');if(isNaN(d))return false;return d.getFullYear()===dashY&&d.getMonth()===dashM;}catch(e){return false;}}
+
+/* Realizado = ganhos do historico fechados no mes selecionado, nas categorias da meta */
+function realizedByCats(cats){return sumByCats((history||[]).filter(h=>h&&h.outcome==='Ganho'),cats,h=>inSelMonthISO(h.closedAt));}
+/* Pipeline aberto do mes selecionado, dividido por rank (A/B/C) */
+function pipelineByRank(cats){
+  const out={a:0,b:0,c:0};
+  try{
+    (pipes||[]).forEach(p=>{
+      if(!p||!cats.includes(p.cat))return;
+      if(!inSelMonthDate(p.date))return;
+      const r=rankOf(+p.nota), v=(+p.value||0);
+      if(r==='A')out.a+=v; else if(r==='B')out.b+=v; else out.c+=v;
+    });
+  }catch(e){}
+  return out;
 }
-function isCurMonthDate(s){ // date 'YYYY-MM-DD' (previsão)
-  try{if(!s)return false;const d=new Date(s+'T00:00:00');if(isNaN(d))return false;const n=new Date();return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth();}catch(e){return false;}
-}
-/* realizado = ganhos do histórico fechados no mês atual | pipeline = pipes abertos previstos p/ mês atual */
-function realizedByCats(cats){return sumByCats(history.filter(h=>h&&h.outcome==='Ganho'),cats,h=>isCurMonthISO(h.closedAt));}
-function pipelineByCats(cats){return sumByCats(pipes,cats,p=>isCurMonthDate(p.date));}
 
 function goalDefs(){
   return [
@@ -895,51 +983,88 @@ function goalDefs(){
   ];
 }
 
-function openDash(){goals=loadGoals();dashEditing=false;renderDash();document.getElementById('dashOverlay').classList.add('open');}
-function closeDash(){document.getElementById('dashOverlay').classList.remove('open');}
+/* toggle board/dash */
+function showBoard(){view='board';document.body.classList.remove('view-dash');}
+function openDash(){
+  goals=loadGoals();dashEditing=false;view='dash';
+  document.body.classList.add('view-dash');
+  renderDash();
+}
+function closeDash(){showBoard();}
+function dashShiftMonth(delta){
+  let m=dashM+delta, y=dashY;
+  while(m<0){m+=12;y--;} while(m>11){m-=12;y++;}
+  dashM=m;dashY=y;renderDash();
+}
+function dashResetMonth(){const n=new Date();dashY=n.getFullYear();dashM=n.getMonth();renderDash();}
+
+function monthLabel(){
+  try{return new Date(dashY,dashM,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});}catch(e){return'';}
+}
+function pctTxt(v,meta){if(!(meta>0))return'—';const p=v/meta*100;return(p>=999?'999+':Math.round(p))+'%';}
+function scenRow(icon,tone,label,detail,val,meta){
+  const hit=meta>0&&val>=meta;
+  return `<div class="sc-row ${hit?'hit':''}">
+    <div class="sc-row-ic" style="background:${tone}">${icon}</div>
+    <div class="sc-row-lbl"><span class="l1">${label}</span><span class="l2">${detail}</span></div>
+    <div class="sc-row-val"><div class="v1">${brlFull(val)}</div><div class="v2">${pctTxt(val,meta)} da meta</div></div>
+    ${hit?'<span class="sc-row-tag">bate</span>':''}
+  </div>`;
+}
 
 function renderDash(){
-  const now=new Date();
-  const mLabel=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  document.getElementById('dashTitle').textContent='Metas do mês · '+mLabel;
-  document.getElementById('dashEditToggle').textContent=dashEditing?'← Voltar aos gráficos':'✎ Editar metas';
+  const lbl=document.getElementById('dashMonthLbl'); if(lbl)lbl.textContent=monthLabel();
+  const tgl=document.getElementById('dashEditToggle');
+  if(tgl)tgl.textContent=dashEditing?'← Ver cenários':'✎ Editar metas';
   const body=document.getElementById('dashBody');
+  if(!body)return;
   if(dashEditing){body.innerHTML=renderDashEdit();wireDashEdit();return;}
 
-  let html='';
+  let cards='';
   goalDefs().forEach(g=>{
     const meta=+goals[g.key]||0;
     const real=realizedByCats(g.cats);
-    const pipe=pipelineByCats(g.cats);
-    const proj=real+pipe;
-    const pctReal=meta>0?(real/meta*100):0;
-    const pctProj=meta>0?(proj/meta*100):0;
-    const falta=Math.max(0,meta-real);
-    const hit=meta>0&&real>=meta;
-    const realW=Math.min(100,pctReal);
-    const projW=Math.min(100,pctProj);
-    const pctRealTxt=meta>0?(pctReal>=100?'100%+':Math.round(pctReal)+'%'):'—';
-    const pctProjTxt=meta>0?(pctProj>=100?'100%+':Math.round(pctProj)+'%'):'—';
-    html+=`<div class="gcard" style="border-left-color:${g.color}">
-      <div class="gc-head">
-        <div class="gc-name"><span class="gc-dot" style="background:${g.color}"></span>${g.name}${hit?'<span class="gc-hit">🏆 batida</span>':''}</div>
-        <div class="gc-pct" style="color:${hit?'var(--green)':g.color}">${pctRealTxt}</div>
+    const rk=pipelineByRank(g.cats);
+    /* cenarios acumulativos: A subset A+B subset A+B+C */
+    const ruim =real+rk.a;              // so os A fecham
+    const medio=real+rk.a+rk.b;         // A e B fecham
+    const bom  =real+rk.a+rk.b+rk.c;    // todos fecham (todo o pipeline do mes)
+    const hitReal=meta>0&&real>=meta;
+    const col=g.color;
+    /* larguras da barra empilhada (escala pela meta; teto 100%) */
+    const sc=meta>0?100/meta:0;
+    const wReal=Math.min(100,real*sc);
+    const wA   =Math.min(100-wReal,rk.a*sc);
+    const wB   =Math.min(100-wReal-wA,rk.b*sc);
+    const wC   =Math.min(100-wReal-wA-wB,rk.c*sc);
+
+    cards+=`<div class="scard" style="border-left-color:${col}">
+      <div class="sc-head">
+        <div class="sc-name"><span class="sc-dot" style="background:${col}"></span>${g.name}</div>
+        <div class="sc-meta">Meta <b>${brlFull(meta)}</b></div>
       </div>
-      <div class="gc-bar">
-        <div class="fill-proj" style="width:${projW}%;background:${g.color}"></div>
-        <div class="fill-real" style="width:${realW}%;background:${hit?'var(--green)':g.color}"></div>
-        <div class="goal-line" style="left:calc(100% - 1px)"></div>
+      <div class="sc-real">Realizado <b>${brlFull(real)}</b> · <span class="rp" style="color:${hitReal?'var(--green)':col}">${pctTxt(real,meta)}</span>${hitReal?' · 🏆 batida':''}</div>
+      <div class="sc-bar">
+        <div class="sc-seg real" style="width:${wReal}%;background:${hitReal?'var(--green)':col}"></div>
+        <div class="sc-seg a" style="left:${wReal}%;width:${wA}%;background:${col}"></div>
+        <div class="sc-seg b" style="left:${wReal+wA}%;width:${wB}%;background:${col}"></div>
+        <div class="sc-seg c" style="left:${wReal+wA+wB}%;width:${wC}%;background:${col}"></div>
+        ${meta>0?'<div class="sc-goal" style="left:calc(100% - 1px)"></div>':''}
       </div>
-      <div class="gc-nums">
-        <div class="gc-n"><span class="gl">Realizado</span><span class="gv" style="color:${hit?'var(--green)':'#fff'}">${brlFull(real)} · ${pctRealTxt}</span></div>
-        <div class="gc-n"><span class="gl">Pipeline previsto</span><span class="gv" style="color:var(--muted2)">${brlFull(pipe)}</span></div>
-        <div class="gc-n"><span class="gl">Projetado</span><span class="gv">${brlFull(proj)} · ${pctProjTxt}</span></div>
-        <div class="gc-n"><span class="gl">Meta</span><span class="gv">${brlFull(meta)}</span></div>
-        <div class="gc-n"><span class="gl">Falta</span><span class="gv" style="color:${falta>0?'var(--orange)':'var(--green)'}">${falta>0?brlFull(falta):'✓ batida'}</span></div>
+      <div class="sc-legend">
+        <span><span class="sc-lg-sw" style="background:${col};opacity:1"></span>Realizado</span>
+        <span><span class="sc-lg-sw" style="background:${col};opacity:.72"></span>+A (ruim)</span>
+        <span><span class="sc-lg-sw" style="background:${col};opacity:.5"></span>+B (médio)</span>
+        <span><span class="sc-lg-sw" style="background:${col};opacity:.3"></span>+C (bom)</span>
+      </div>
+      <div class="sc-scen">
+        ${scenRow('🔥','rgba(255,128,134,.18)','Ruim (só A)',       'Realizado + pipeline A',           ruim, meta)}
+        ${scenRow('☀️','rgba(242,183,5,.18)', 'Médio (A + B)',      'Realizado + pipeline A e B',        medio,meta)}
+        ${scenRow('✅','rgba(70,200,138,.18)','Bom (todos)',        'Realizado + todo o pipeline (A+B+C)',bom,  meta)}
       </div>
     </div>`;
   });
-  body.innerHTML=html;
+  body.innerHTML=`<div class="dp-grid">${cards||'<div class="dp-empty">Sem metas.</div>'}</div>`;
 }
 
 function renderDashEdit(){
@@ -950,14 +1075,14 @@ function renderDashEdit(){
     {key:'seg', name:'Seguros'},
     {key:'con', name:'Consórcio'},
   ];
-  let h='<div class="dash-mtitle">Editar metas mensais (R$)</div>';
+  let h='<div style="max-width:560px;margin:0 auto"><div class="dash-mtitle">Editar metas mensais (R$)</div>';
   rows.forEach(r=>{
     h+=`<div class="dash-editrow"><label>${r.name}</label><input type="text" inputmode="numeric" id="goal-${r.key}" value="${brlFull(+goals[r.key]||0)}"></div>`;
   });
   h+=`<div class="dash-edit-actions">
     <button class="btn btn-ghost" id="dashResetGoals">Restaurar padrão</button>
     <button class="btn btn-primary" id="dashSaveGoals">Salvar metas</button>
-  </div>`;
+  </div></div>`;
   return h;
 }
 function wireDashEdit(){
@@ -1020,10 +1145,11 @@ function wire(){
   document.getElementById('importFile').onchange=e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value='';};
   document.getElementById('btnHist').onclick=openHist;
   document.getElementById('btnDash').onclick=openDash;
-  document.getElementById('dashClose').onclick=closeDash;
-  document.getElementById('dashCloseBtn').onclick=closeDash;
+  document.getElementById('dashBack').onclick=closeDash;
   document.getElementById('dashEditToggle').onclick=()=>{dashEditing=!dashEditing;renderDash();};
-  document.getElementById('dashOverlay').onclick=e=>{if(e.target.id==='dashOverlay')closeDash();};
+  document.getElementById('dashPrev').onclick=()=>dashShiftMonth(-1);
+  document.getElementById('dashNext').onclick=()=>dashShiftMonth(1);
+  document.getElementById('dashToday').onclick=dashResetMonth;
   document.getElementById('histClose').onclick=closeHist;
   document.getElementById('histCloseBtn').onclick=closeHist;
   document.getElementById('histOverlay').onclick=e=>{if(e.target.id==='histOverlay')closeHist();};
@@ -1040,7 +1166,7 @@ function wire(){
   document.getElementById('snzSave').onclick=snoozeSave;
   document.getElementById('snoozeOverlay').onclick=e=>{if(e.target.id==='snoozeOverlay')closeSnooze();};
   document.querySelectorAll('.snz-presets button').forEach(b=>{b.onclick=()=>{const dd=new Date();dd.setDate(dd.getDate()+(+b.dataset.add));document.getElementById('snzDate').value=dd.toISOString().slice(0,10);};});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();closeSnooze();closeDash();}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();closeSnooze();if(view==='dash')closeDash();}});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();});
   window.addEventListener('pagehide',persist);
 }
