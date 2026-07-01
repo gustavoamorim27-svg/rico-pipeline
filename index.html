@@ -100,6 +100,14 @@ header{
 .col-dots{display:flex;gap:3px;flex-shrink:0}
 .col-name{font-family:'Sora';font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .col-badge{font-family:'Sora';font-weight:700;font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.col-split{flex-shrink:0;display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px 2px}
+.col-split-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.col-split-tag b{font-family:'Sora';font-weight:800;color:var(--text,#fff)}
+.cs-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sumcell .ss:has(.ss-split){white-space:normal}
+.ss-split{display:flex;flex-wrap:wrap;gap:4px 8px}
+.ss-tag{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.ss-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
 .col-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;-webkit-overflow-scrolling:touch}
 .col-body::-webkit-scrollbar{width:4px}
 .col-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
@@ -416,10 +424,10 @@ const CATS=[
 ];
 /* colunas visuais (Seguros + Consórcio = Crossell) */
 const COLUMNS=[
-  {id:'rv',   cls:'rv',   name:'Renda Variável', cats:['rv']},
   {id:'ag',   cls:'ag',   name:'Alocação Geral', cats:['ag']},
   {id:'cap',  cls:'cap',  name:'Captação',       cats:['cap']},
   {id:'cross',cls:'cross',name:'Crossell',       cats:['seg','con'], mixed:true},
+  {id:'rv',   cls:'rv',   name:'Renda Variável', cats:['rv']},
 ];
 const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão','Aceito falta push'];
 const SUBTYPES=['Previdência','TED','STVM','PJ','Consultoria','Originação'];
@@ -568,7 +576,11 @@ function renderSumbar(){
     const items=act.filter(p=>col.cats.includes(p.cat));
     const sum=items.reduce((a,p)=>a+(+p.value||0),0);
     let sub='';
-    if(col.mixed){const seg=items.filter(p=>p.cat==='seg').length,con=items.filter(p=>p.cat==='con').length;sub=`${seg} seg · ${con} cons`;}
+    if(col.mixed){
+      const segItems=items.filter(p=>p.cat==='seg'),conItems=items.filter(p=>p.cat==='con');
+      const segSum=segItems.reduce((a,p)=>a+(+p.value||0),0),conSum=conItems.reduce((a,p)=>a+(+p.value||0),0);
+      sub=`<span class="ss-split"><span class="ss-tag"><span class="ss-dot" style="background:var(--seg)"></span>Seguros ${brl(segSum)}</span><span class="ss-tag"><span class="ss-dot" style="background:var(--con)"></span>Consórcio ${brl(conSum)}</span></span>`;
+    }
     else sub=`${items.length} pipe${items.length!==1?'s':''}`;
     h+=`<div class="sumcell s-${col.cls}"><span class="sl">${col.name}</span><span class="sv">${brl(sum)}</span><span class="ss">${sub}</span></div>`;
   });
@@ -584,11 +596,21 @@ function renderGrid(){
       ? `<div class="col-dots">${col.cats.map(c=>`<span class="col-dot" style="background:${catById(c).color}"></span>`).join('')}</div>`
       : `<div class="col-dot" style="background:${catById(col.cats[0]).color}"></div>`;
     const presetCat=col.mixed?'seg':col.cats[0];
+    let splitRow='';
+    if(col.mixed){
+      const segSum=items.filter(p=>p.cat==='seg').reduce((a,p)=>a+(+p.value||0),0);
+      const conSum=items.filter(p=>p.cat==='con').reduce((a,p)=>a+(+p.value||0),0);
+      splitRow=`<div class="col-split">
+        <span class="col-split-tag"><span class="cs-dot" style="background:var(--seg)"></span>Seguros <b>${brlFull(segSum)}</b></span>
+        <span class="col-split-tag"><span class="cs-dot" style="background:var(--con)"></span>Consórcio <b>${brlFull(conSum)}</b></span>
+      </div>`;
+    }
     return `<div class="col">
       <div class="col-head ${col.cls}">
         <div class="col-hl">${dots}<span class="col-name">${col.name}</span></div>
         <span class="col-badge">${items.length} · ${brl(sum)}</span>
       </div>
+      ${splitRow}
       <div class="col-body">${cards}</div>
       <div class="add-btn" data-cat="${presetCat}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Adicionar pipe
