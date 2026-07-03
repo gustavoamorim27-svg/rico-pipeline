@@ -31,6 +31,8 @@ html,body{height:100%;background:var(--bg);overflow:hidden}
 body{font-family:'Manrope',system-ui,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;
   display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
 body.dragging{user-select:none;-webkit-user-select:none}
+/* durante o drag ativo: trava o scroll nativo das colunas p/ o browser nao rolar nem cancelar o arraste */
+body.dragging .col-body,body.dragging .wk-body,body.dragging .pcard{touch-action:none!important}
 
 .topbar{height:6px;background:var(--orange);flex-shrink:0;padding-top:var(--safe-t);background-clip:content-box}
 
@@ -126,7 +128,14 @@ header{
 .add-btn:hover{border-color:var(--orange);color:var(--orange);background:rgba(242,101,34,.06)}
 .add-btn svg{width:12px;height:12px;flex-shrink:0}
 
-.pcard{background:var(--panel);border:1px solid var(--line2);border-left-width:3px;border-radius:var(--r);padding:12px;cursor:pointer;position:relative;display:flex;flex-direction:column;gap:0;transition:background .12s,box-shadow .12s,border-color .12s;touch-action:auto}
+.pcard{background:var(--panel);border:1px solid var(--line2);border-left-width:3px;border-radius:var(--r);padding:12px 12px 12px 26px;cursor:pointer;position:relative;display:flex;flex-direction:column;gap:0;transition:background .12s,box-shadow .12s,border-color .12s;touch-action:pan-y}
+/* alca de arraste: toque nela NUNCA vira scroll (touch-action:none) => nao dispara pointercancel */
+.pc-grip{position:absolute;left:0;top:0;bottom:0;width:22px;display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--muted);opacity:.55;touch-action:none;border-radius:var(--r) 0 0 var(--r);transition:opacity .12s,background .12s;-webkit-user-select:none;user-select:none}
+.pc-grip svg{width:11px;height:20px;display:block;pointer-events:none}
+.pc-grip:hover{opacity:1;background:rgba(255,255,255,.05)}
+.pc-grip:active{cursor:grabbing}
+.pcard:hover .pc-grip{opacity:.85}
+.pcard.drag-src .pc-grip{cursor:grabbing}
 .pcard:hover{background:var(--panel2);border-color:rgba(255,255,255,.22);box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .pcard.drag-src{opacity:.35}
 .pc-catrow{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--muted2);margin-bottom:7px}
@@ -899,6 +908,7 @@ function cardHTML(p,showCat){
   const catrow=showCat?`<div class="pc-catrow"><span class="cat-dot" style="background:${cat.color}"></span>${cat.name}</div>`:'';
   const subchip=(p.cat==='cap'&&p.subtype)?`<div class="pc-sub">${esc(p.subtype)}</div>`:'';
   return `<div class="pcard" data-id="${p.id}" style="border-left-color:${cat.color}">
+    <div class="pc-grip" aria-label="Arrastar" title="Arraste para mover"><svg viewBox="0 0 6 16" fill="currentColor"><circle cx="1.5" cy="2" r="1.3"/><circle cx="4.5" cy="2" r="1.3"/><circle cx="1.5" cy="8" r="1.3"/><circle cx="4.5" cy="8" r="1.3"/><circle cx="1.5" cy="14" r="1.3"/><circle cx="4.5" cy="14" r="1.3"/></svg></div>
     <button class="pc-del" title="Excluir" aria-label="Excluir">✕</button>
     ${catrow}
     <div class="pc-top"><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
@@ -955,9 +965,25 @@ function autoScrollStep(){
 }
 function stopAutoScroll(){autoScrollY=0;autoScrollTarget=null;if(autoScrollRAF){cancelAnimationFrame(autoScrollRAF);autoScrollRAF=null;}}
 
-function attachCard(card){
+/* ── makeDraggable: nucleo unico de arraste usado pelo board E pela visao semana.
+   opts = {
+     getState:()=>drag,          // le o objeto de drag ativo
+     setState:(v)=>{drag=v;},     // grava o objeto de drag ativo
+     onMoveExtra(x,y),            // highlight de zonas/colunas + auto-scroll
+     stopScroll(),                // para o auto-scroll
+     onBegin(ev,ctx){},           // efeitos ao iniciar (dropzones/ highlight)
+     onDropEnd(ev,allow){},       // resolve o drop (zonas ou remap de data)
+     onTap(id){}                  // clique curto = abrir edicao
+   }
+   BLINDAGEM CONTRA SCROLL:
+   - grip tem touch-action:none => tocar nela nunca vira scroll do browser.
+   - ao iniciar, body.dragging aplica touch-action:none nas colunas.
+   - pointermove {passive:false} + preventDefault() enquanto o drag esta ativo
+     impede o scroll nativo e, portanto, o pointercancel espurio.
+   - setPointerCapture mantem os eventos no card mesmo com re-layout. */
+function makeDraggable(card,opts){
   const id=card.dataset.id;
-  let sx=0,sy=0,started=false,moved=false,holdTimer=null,pid=null,captured=false;
+  let sx=0,sy=0,started=false,moved=false,holdTimer=null,pid=null,captured=false,onGrip=false;
   function capture(){try{card.setPointerCapture(pid);captured=true;}catch(e){captured=false;}}
   function release(){try{if(captured)card.releasePointerCapture(pid);}catch(e){}captured=false;}
   function begin(ev){
@@ -968,69 +994,89 @@ function attachCard(card){
     clone.style.width=r.width+'px';clone.style.left=r.left+'px';clone.style.top=r.top+'px';
     document.body.appendChild(clone);
     document.body.classList.add('dragging');
-    drag={id,card,clone,offX:ev.clientX-r.left,offY:ev.clientY-r.top,lastX:ev.clientX,lastY:ev.clientY};
+    const st={id,card,clone,offX:ev.clientX-r.left,offY:ev.clientY-r.top,lastX:ev.clientX,lastY:ev.clientY};
+    opts.setState(st);
     card.classList.add('drag-src');
-    document.getElementById('dropzones').classList.add('show');
-    capture(); /* prende o ponteiro ao card: o scroll da coluna nao mata mais o drag */
+    capture();                       /* prende o ponteiro: scroll da coluna nao mata mais o drag */
+    opts.onBegin&&opts.onBegin(ev,st);
+    opts.onMoveExtra(ev.clientX,ev.clientY);
   }
   function onMove(ev){
     if(!started){
-      if(Math.abs(ev.clientX-sx)>8||Math.abs(ev.clientY-sy)>8){
-        moved=true;clearTimeout(holdTimer);
-        if(ev.pointerType==='mouse'){begin(ev);}
-        else{
-          /* movimento antes do hold em touch = intencao de rolar: encerra sem drag,
-             deixando o navegador rolar a coluna normalmente */
-          finish(ev,false);
-        }
+      if(Math.abs(ev.clientX-sx)>6||Math.abs(ev.clientY-sy)>6){
+        clearTimeout(holdTimer);
+        /* mouse OU toque na alca => inicia arraste na hora.
+           toque no CORPO antes do hold => intencao de rolar: solta o drag e deixa o browser rolar */
+        if(ev.pointerType==='mouse'||onGrip){moved=true;begin(ev);}
+        else{moved=true;finish(ev,false);}
       }
       return;
     }
-    ev.preventDefault();
-    drag.lastX=ev.clientX;drag.lastY=ev.clientY;
-    drag.clone.style.left=(ev.clientX-drag.offX)+'px';
-    drag.clone.style.top=(ev.clientY-drag.offY)+'px';
-    highlightZones(ev.clientX,ev.clientY);
-    updateAutoScroll(ev.clientX,ev.clientY);
+    ev.preventDefault();             /* bloqueia o scroll nativo durante o arraste ativo */
+    const st=opts.getState();if(!st)return;
+    st.lastX=ev.clientX;st.lastY=ev.clientY;
+    st.clone.style.left=(ev.clientX-st.offX)+'px';
+    st.clone.style.top=(ev.clientY-st.offY)+'px';
+    opts.onMoveExtra(ev.clientX,ev.clientY);
   }
   function onUp(ev){finish(ev,true);}
-  function onCancel(ev){
-    /* iniciado + com captura: um pointercancel espurio (scroll) NAO deve matar o
-       drag. Enquanto tivermos a captura do ponteiro, ignoramos o cancel. */
-    if(started&&captured&&drag)return;
-    finish(ev,false);
-  }
-  function onLost(ev){/* perdeu a captura durante o drag: finaliza no local atual */ if(started)finish(ev,true);}
+  /* iniciado + com captura: pointercancel espurio (scroll) NAO mata o drag */
+  function onCancel(ev){if(started&&captured&&opts.getState())return;finish(ev,false);}
+  function onLost(ev){if(started)finish(ev,true);}
   function detach(){card.removeEventListener('pointermove',onMove);card.removeEventListener('pointerup',onUp);card.removeEventListener('pointercancel',onCancel);card.removeEventListener('lostpointercapture',onLost);}
   function finish(ev,allow){
-    clearTimeout(holdTimer);stopAutoScroll();release();detach();
+    clearTimeout(holdTimer);opts.stopScroll();release();detach();
     if(started){
-      const out=allow?zoneAt(ev.clientX,ev.clientY):null;
-      if(drag&&drag.clone)drag.clone.remove();
+      const st=opts.getState();
+      if(st&&st.clone)st.clone.remove();
       card.classList.remove('drag-src');
       document.body.classList.remove('dragging');
-      document.getElementById('dropzones').classList.remove('show');
-      clearZones();drag=null;started=false;
-      if(out==='snooze')openSnooze(id);
-      else if(out)closePipe(id,out);
+      started=false;
+      opts.onDropEnd(ev,allow,st);   /* resolve zonas / remap de data e limpa opts.setState(null) */
     }else{
       started=false;
-      if(allow&&!moved)openModal(id);
+      if(allow&&!moved)opts.onTap(id);
     }
   }
   card.addEventListener('pointerdown',ev=>{
     if(ev.target.closest('.pc-del'))return;
     if(ev.button!==undefined&&ev.button>0)return;
+    onGrip=!!(ev.target.closest&&ev.target.closest('.pc-grip'));
     sx=ev.clientX;sy=ev.clientY;started=false;moved=false;pid=ev.pointerId;captured=false;
-    /* Listeners no proprio card: apos begin() capturamos o ponteiro, e a captura
-       roteia todos os eventos pro card, sobrevivendo ao scroll/re-layout da coluna. */
     card.addEventListener('pointermove',onMove,{passive:false});
     card.addEventListener('pointerup',onUp);
     card.addEventListener('pointercancel',onCancel);
     card.addEventListener('lostpointercapture',onLost);
-    /* Nao capturamos aqui: deixa o dedo rolar a coluna normalmente antes do hold.
-       So no hold (begin) capturamos, blindando o drag ativo contra o scroll. */
-    if(ev.pointerType!=='mouse')holdTimer=setTimeout(()=>begin(ev),200);
+    if(ev.pointerType==='mouse'){
+      /* desktop: sem hold; o proprio threshold do onMove inicia o arraste */
+    }else if(onGrip){
+      /* toque na alca: inicia imediatamente (grip tem touch-action:none, nao rola) */
+      ev.preventDefault();
+      begin(ev);
+    }else{
+      /* toque no corpo: hold curto; mover antes disso rola a coluna normalmente */
+      holdTimer=setTimeout(()=>begin(ev),180);
+    }
+  });
+}
+
+function attachCard(card){
+  /* board: usa o nucleo unificado. Drop nas dropzones (Ganho/Perdido/Arquivar). */
+  makeDraggable(card,{
+    getState:()=>drag,
+    setState:v=>{drag=v;},
+    onMoveExtra:(x,y)=>{highlightZones(x,y);updateAutoScroll(x,y);},
+    stopScroll:stopAutoScroll,
+    onBegin:()=>{document.getElementById('dropzones').classList.add('show');},
+    onDropEnd:(ev,allow)=>{
+      const out=allow?zoneAt(ev.clientX,ev.clientY):null;
+      document.getElementById('dropzones').classList.remove('show');
+      clearZones();drag=null;
+      const id=card.dataset.id;
+      if(out==='snooze')openSnooze(id);
+      else if(out)closePipe(id,out);
+    },
+    onTap:id=>openModal(id)
   });
 }
 
@@ -1545,67 +1591,19 @@ function wkScrollStep(){
 function wkStopAutoScroll(){wkScrollY=0;wkScrollTarget=null;if(wkScrollRAF){cancelAnimationFrame(wkScrollRAF);wkScrollRAF=null;}}
 
 function attachWeekCard(card){
-  const id=card.dataset.id;
-  let sx=0,sy=0,started=false,moved=false,holdTimer=null,pid=null,captured=false;
-  function capture(){try{card.setPointerCapture(pid);captured=true;}catch(e){captured=false;}}
-  function release(){try{if(captured)card.releasePointerCapture(pid);}catch(e){}captured=false;}
-  function begin(ev){
-    started=true;moved=true;
-    const r=card.getBoundingClientRect();
-    const clone=card.cloneNode(true);
-    clone.classList.add('drag-clone');
-    clone.style.width=r.width+'px';clone.style.left=r.left+'px';clone.style.top=r.top+'px';
-    document.body.appendChild(clone);
-    document.body.classList.add('dragging');
-    weekDrag={id,card,clone,offX:ev.clientX-r.left,offY:ev.clientY-r.top,lastX:ev.clientX,lastY:ev.clientY};
-    card.classList.add('drag-src');
-    capture();
-    wkHighlight(ev.clientX,ev.clientY);
-  }
-  function onMove(ev){
-    if(!started){
-      if(Math.abs(ev.clientX-sx)>8||Math.abs(ev.clientY-sy)>8){
-        moved=true;clearTimeout(holdTimer);
-        if(ev.pointerType==='mouse'){begin(ev);}
-        else{finish(ev,false);}   // rolagem antes do hold em touch: solta o drag
-      }
-      return;
-    }
-    ev.preventDefault();
-    weekDrag.lastX=ev.clientX;weekDrag.lastY=ev.clientY;
-    weekDrag.clone.style.left=(ev.clientX-weekDrag.offX)+'px';
-    weekDrag.clone.style.top=(ev.clientY-weekDrag.offY)+'px';
-    wkHighlight(ev.clientX,ev.clientY);
-    wkUpdateAutoScroll(ev.clientX,ev.clientY);
-  }
-  function onUp(ev){finish(ev,true);}
-  function onCancel(ev){if(started&&captured&&weekDrag)return;finish(ev,false);}
-  function onLost(ev){if(started)finish(ev,true);}
-  function detach(){card.removeEventListener('pointermove',onMove);card.removeEventListener('pointerup',onUp);card.removeEventListener('pointercancel',onCancel);card.removeEventListener('lostpointercapture',onLost);}
-  function finish(ev,allow){
-    clearTimeout(holdTimer);wkStopAutoScroll();release();detach();
-    if(started){
+  /* visao semana: mesmo nucleo. Drop em OUTRO dia remarca pipe.date (remapPipeDate). */
+  makeDraggable(card,{
+    getState:()=>weekDrag,
+    setState:v=>{weekDrag=v;},
+    onMoveExtra:(x,y)=>{wkHighlight(x,y);wkUpdateAutoScroll(x,y);},
+    stopScroll:wkStopAutoScroll,
+    onDropEnd:(ev,allow)=>{
       const col=allow?wkColAt(ev.clientX,ev.clientY):null;
       const newIso=col?col.dataset.iso:null;
-      if(weekDrag&&weekDrag.clone)weekDrag.clone.remove();
-      card.classList.remove('drag-src');
-      document.body.classList.remove('dragging');
-      wkClearHighlight();weekDrag=null;started=false;
-      if(newIso)remapPipeDate(id,newIso);   // soltou num dia => remarca a data
-    }else{
-      started=false;
-      if(allow&&!moved){openModalFromWeek(id);}  // clique = editar
-    }
-  }
-  card.addEventListener('pointerdown',ev=>{
-    if(ev.target.closest('.pc-del'))return;
-    if(ev.button!==undefined&&ev.button>0)return;
-    sx=ev.clientX;sy=ev.clientY;started=false;moved=false;pid=ev.pointerId;captured=false;
-    card.addEventListener('pointermove',onMove,{passive:false});
-    card.addEventListener('pointerup',onUp);
-    card.addEventListener('pointercancel',onCancel);
-    card.addEventListener('lostpointercapture',onLost);
-    if(ev.pointerType!=='mouse')holdTimer=setTimeout(()=>begin(ev),200);
+      wkClearHighlight();weekDrag=null;
+      if(newIso)remapPipeDate(card.dataset.id,newIso);
+    },
+    onTap:id=>openModalFromWeek(id)
   });
 }
 /* remarca a data do pipe para o dia de destino; se for o mesmo dia, no-op */
