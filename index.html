@@ -353,6 +353,28 @@ body.view-cal #calPage{display:flex}
 .cal-di-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-di-val{font-family:'Sora';font-weight:800;font-size:13px;flex-shrink:0}
 .cal-day-empty{padding:26px 16px;text-align:center;color:var(--muted);font-style:italic;font-size:13px}
+/* -- VISAO SEMANA = mini-kanban por dia (mesmos cards da pagina principal) -- */
+.wk-grid{display:none}
+body.view-cal.cal-week .cal-dow,
+body.view-cal.cal-week #calGrid{display:none!important}
+body.view-cal.cal-week .wk-grid{display:grid}
+.wk-grid{grid-template-columns:repeat(7,1fr);gap:8px;flex:1;min-height:0}
+.wk-col{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0;background:var(--panel);transition:background .12s,border-color .12s}
+.wk-col.today{border-color:var(--orange);box-shadow:inset 0 0 0 1px var(--orange)}
+.wk-col.wk-over{background:var(--panel2);border-color:var(--orange)}
+.wk-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px;border-bottom:1px solid var(--line2);background:var(--bg2)}
+.wk-head .wk-dow{font-family:'Sora';font-weight:800;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted2)}
+.wk-col.today .wk-head .wk-dow{color:var(--orange)}
+.wk-head .wk-dnum{font-family:'Sora';font-weight:700;font-size:12px;color:var(--muted)}
+.wk-head .wk-cnt{font-family:'Sora';font-weight:800;font-size:10px;color:var(--muted)}
+.wk-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;-webkit-overflow-scrolling:touch}
+.wk-body::-webkit-scrollbar{width:4px}
+.wk-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+.wk-empty{font-size:11px;color:var(--muted);text-align:center;padding:14px 6px;font-style:italic}
+.wk-add{flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:5px;margin:0 8px 8px;padding:8px;border-radius:var(--r);cursor:pointer;border:1.5px dashed rgba(255,255,255,.14);color:var(--muted);font-size:11px;font-weight:700;transition:all .13s}
+.wk-add:hover{border-color:var(--orange);color:var(--orange);background:rgba(242,101,34,.06)}
+.wk-add svg{width:11px;height:11px;flex-shrink:0}
+.wk-col.wk-over .wk-body{background:rgba(242,101,34,.05)}
 @media (max-width:720px){
   body.view-cal #calPage{display:block}
   .calpage{overflow:visible}
@@ -366,6 +388,11 @@ body.view-cal #calPage{display:flex}
   .cal-daynum{font-size:11px}
   .cal-mk{width:15px;height:15px;font-size:9px;border-radius:4px}
   .cal-seg button{padding:7px 11px}
+  .wk-grid{grid-template-columns:1fr;gap:8px}
+  .wk-col{border-bottom:6px solid var(--bg)}
+  .wk-body{overflow:visible;display:block}
+  .wk-body .pcard{margin-bottom:8px}
+  .wk-body .pcard:last-child{margin-bottom:0}
 }
 .toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:130;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -519,6 +546,7 @@ body.view-cal #calPage{display:flex}
   <div class="cal-body">
     <div class="cal-dow" id="calDow"></div>
     <div class="cal-grid" id="calGrid"></div>
+    <div class="wk-grid" id="calWeekGrid"></div>
   </div>
 </div>
 
@@ -1076,7 +1104,11 @@ function openModal(id,presetCat){
   document.getElementById('overlay').classList.add('open');
   /* sem foco automático: evita abrir o teclado no iPad */
 }
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('open');
+  /* se abrimos a partir da visao semana, re-renderiza o calendario ao fechar */
+  if(weekCreateReturn){weekCreateReturn=false;if(view==='cal')renderCal();}
+}
 function saveModal(){
   const client=document.getElementById('f-client').value.trim();
   if(!client){document.getElementById('f-client').focus();return;}
@@ -1370,7 +1402,7 @@ function openCal(){
   document.body.classList.add('view-cal');
   renderCal();
 }
-function closeCal(){view='board';document.body.classList.remove('view-cal');}
+function closeCal(){view='board';document.body.classList.remove('view-cal');document.body.classList.remove('cal-week');}
 function calSetMode(m){calMode=m;document.querySelectorAll('#calModeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));renderCal();}
 function calShift(delta){
   if(calMode==='month'){
@@ -1393,6 +1425,7 @@ function renderCal(){
   const tod=todayYmd();
 
   if(calMode==='month'){
+    document.body.classList.remove('cal-week');
     grid.className='cal-grid';
     if(lbl){try{lbl.textContent=new Date(calY,calM,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});}catch(e){lbl.textContent='';}}
     const first=new Date(calY,calM,1);
@@ -1405,8 +1438,12 @@ function renderCal(){
       html+=calCellHTML(d,iso,inMonth,tod,false);
     }
     grid.innerHTML=html;
+    grid.querySelectorAll('.cal-cell[data-iso]').forEach(c=>{
+      c.onclick=()=>openCalDay(c.dataset.iso);
+    });
   }else{
-    grid.className='cal-grid week';
+    /* vista SEMANA: mini-kanban por dia com os MESMOS cards do board */
+    document.body.classList.add('cal-week');
     const ws=new Date(calWeek), we=new Date(calWeek);we.setDate(ws.getDate()+6);
     if(lbl){
       try{
@@ -1415,17 +1452,173 @@ function renderCal(){
         lbl.textContent=a+' – '+b;
       }catch(e){lbl.textContent='';}
     }
-    let html='';
-    for(let i=0;i<7;i++){
-      const d=new Date(ws);d.setDate(ws.getDate()+i);
-      html+=calCellHTML(d,ymd(d),true,tod,true);
-    }
-    grid.innerHTML=html;
+    renderWeekKanban(ws,tod);
   }
-  grid.querySelectorAll('.cal-cell[data-iso]').forEach(c=>{
-    c.onclick=()=>openCalDay(c.dataset.iso);
+}
+
+/* -- VISAO SEMANA: mini-kanban por dia (reaproveita cardHTML + drag) -- */
+function renderWeekKanban(ws,tod){
+  const wg=document.getElementById('calWeekGrid');
+  if(!wg)return;
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(ws.getDate()+i);
+    const iso=ymd(d);
+    const list=pipesOnDay(iso);
+    const isToday=iso===tod;
+    /* MESMOS cards da principal: showCat=true p/ identificar categoria em cada dia */
+    const cards=list.length?list.map(p=>cardHTML(p,true)).join(''):'<div class="wk-empty">Sem pipes.</div>';
+    html+=`<div class="wk-col${isToday?' today':''}" data-iso="${iso}">
+      <div class="wk-head">
+        <span class="wk-dow">${DOW_PT[i]}</span>
+        <span class="wk-dnum">${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}</span>
+        <span class="wk-cnt">${list.length||''}</span>
+      </div>
+      <div class="wk-body" data-iso="${iso}">${cards}</div>
+      <div class="wk-add" data-iso="${iso}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Adicionar
+      </div>
+    </div>`;
+  }
+  wg.innerHTML=html;
+  /* cards: mesmo gesto do board (hold/threshold + pointer-capture + auto-scroll),
+     mas soltar em OUTRO dia remarca a data; clique abre o modal de edicao */
+  wg.querySelectorAll('.pcard').forEach(card=>{
+    attachWeekCard(card);
+    const del=card.querySelector('.pc-del');
+    if(del)del.onclick=e=>{e.stopPropagation();quickDelWeek(card.dataset.id);};
+  });
+  /* "+" do dia: cria pipe novo ja com a data daquele dia pre-preenchida */
+  wg.querySelectorAll('.wk-add[data-iso]').forEach(btn=>{
+    btn.onclick=()=>openModalForDate(btn.dataset.iso);
   });
 }
+function quickDelWeek(id){if(!confirm('Excluir este pipe definitivamente?'))return;pipes=pipes.filter(x=>x.id!==id);persist();render();renderCal();}
+/* abre modal de NOVO pipe com a data do dia ja setada (reaproveita openModal+saveModal) */
+function openModalForDate(iso){
+  openModal(null,null);
+  const df=document.getElementById('f-date');
+  if(df)df.value=iso;
+  weekCreateReturn=true;   // ao salvar, re-renderiza o calendario
+}
+
+/* -- DRAG na visao semana: mesmo padrao do board (pointer-capture, hold, auto-scroll),
+   soltar sobre OUTRO dia remarca pipe.date e persiste -- */
+let weekDrag=null, weekCreateReturn=false;
+function wkColBodyAt(x,y){
+  const els=document.elementsFromPoint(x,y);
+  for(const el of els){const cb=el.closest&&el.closest('.wk-body');if(cb)return cb;}
+  return null;
+}
+function wkColAt(x,y){
+  const els=document.elementsFromPoint(x,y);
+  for(const el of els){const c=el.closest&&el.closest('.wk-col');if(c)return c;}
+  return null;
+}
+function wkHighlight(x,y){
+  const col=wkColAt(x,y);
+  document.querySelectorAll('.wk-col').forEach(c=>c.classList.toggle('wk-over',c===col));
+}
+function wkClearHighlight(){document.querySelectorAll('.wk-col').forEach(c=>c.classList.remove('wk-over'));}
+/* auto-scroll da coluna de dia sob o cursor (mesmo mecanismo do board) */
+let wkScrollRAF=null, wkScrollY=0, wkScrollTarget=null;
+function wkUpdateAutoScroll(x,y){
+  const EDGE=64, MAX=16;
+  const cb=wkColBodyAt(x,y);
+  let vy=0;
+  if(cb){
+    const r=cb.getBoundingClientRect();
+    if(y<r.top+EDGE)         vy=-MAX*Math.min(1,(r.top+EDGE-y)/EDGE);
+    else if(y>r.bottom-EDGE) vy= MAX*Math.min(1,(y-(r.bottom-EDGE))/EDGE);
+  }
+  wkScrollY=vy; wkScrollTarget=cb;
+  if(vy&&!wkScrollRAF)wkScrollRAF=requestAnimationFrame(wkScrollStep);
+}
+function wkScrollStep(){
+  wkScrollRAF=null;
+  if(weekDrag&&wkScrollY&&wkScrollTarget){
+    wkScrollTarget.scrollTop+=wkScrollY;
+    if(weekDrag)wkHighlight(weekDrag.lastX,weekDrag.lastY);
+    wkScrollRAF=requestAnimationFrame(wkScrollStep);
+  }
+}
+function wkStopAutoScroll(){wkScrollY=0;wkScrollTarget=null;if(wkScrollRAF){cancelAnimationFrame(wkScrollRAF);wkScrollRAF=null;}}
+
+function attachWeekCard(card){
+  const id=card.dataset.id;
+  let sx=0,sy=0,started=false,moved=false,holdTimer=null,pid=null,captured=false;
+  function capture(){try{card.setPointerCapture(pid);captured=true;}catch(e){captured=false;}}
+  function release(){try{if(captured)card.releasePointerCapture(pid);}catch(e){}captured=false;}
+  function begin(ev){
+    started=true;moved=true;
+    const r=card.getBoundingClientRect();
+    const clone=card.cloneNode(true);
+    clone.classList.add('drag-clone');
+    clone.style.width=r.width+'px';clone.style.left=r.left+'px';clone.style.top=r.top+'px';
+    document.body.appendChild(clone);
+    document.body.classList.add('dragging');
+    weekDrag={id,card,clone,offX:ev.clientX-r.left,offY:ev.clientY-r.top,lastX:ev.clientX,lastY:ev.clientY};
+    card.classList.add('drag-src');
+    capture();
+    wkHighlight(ev.clientX,ev.clientY);
+  }
+  function onMove(ev){
+    if(!started){
+      if(Math.abs(ev.clientX-sx)>8||Math.abs(ev.clientY-sy)>8){
+        moved=true;clearTimeout(holdTimer);
+        if(ev.pointerType==='mouse'){begin(ev);}
+        else{finish(ev,false);}   // rolagem antes do hold em touch: solta o drag
+      }
+      return;
+    }
+    ev.preventDefault();
+    weekDrag.lastX=ev.clientX;weekDrag.lastY=ev.clientY;
+    weekDrag.clone.style.left=(ev.clientX-weekDrag.offX)+'px';
+    weekDrag.clone.style.top=(ev.clientY-weekDrag.offY)+'px';
+    wkHighlight(ev.clientX,ev.clientY);
+    wkUpdateAutoScroll(ev.clientX,ev.clientY);
+  }
+  function onUp(ev){finish(ev,true);}
+  function onCancel(ev){if(started&&captured&&weekDrag)return;finish(ev,false);}
+  function onLost(ev){if(started)finish(ev,true);}
+  function detach(){card.removeEventListener('pointermove',onMove);card.removeEventListener('pointerup',onUp);card.removeEventListener('pointercancel',onCancel);card.removeEventListener('lostpointercapture',onLost);}
+  function finish(ev,allow){
+    clearTimeout(holdTimer);wkStopAutoScroll();release();detach();
+    if(started){
+      const col=allow?wkColAt(ev.clientX,ev.clientY):null;
+      const newIso=col?col.dataset.iso:null;
+      if(weekDrag&&weekDrag.clone)weekDrag.clone.remove();
+      card.classList.remove('drag-src');
+      document.body.classList.remove('dragging');
+      wkClearHighlight();weekDrag=null;started=false;
+      if(newIso)remapPipeDate(id,newIso);   // soltou num dia => remarca a data
+    }else{
+      started=false;
+      if(allow&&!moved){openModalFromWeek(id);}  // clique = editar
+    }
+  }
+  card.addEventListener('pointerdown',ev=>{
+    if(ev.target.closest('.pc-del'))return;
+    if(ev.button!==undefined&&ev.button>0)return;
+    sx=ev.clientX;sy=ev.clientY;started=false;moved=false;pid=ev.pointerId;captured=false;
+    card.addEventListener('pointermove',onMove,{passive:false});
+    card.addEventListener('pointerup',onUp);
+    card.addEventListener('pointercancel',onCancel);
+    card.addEventListener('lostpointercapture',onLost);
+    if(ev.pointerType!=='mouse')holdTimer=setTimeout(()=>begin(ev),200);
+  });
+}
+/* remarca a data do pipe para o dia de destino; se for o mesmo dia, no-op */
+function remapPipeDate(id,iso){
+  const p=pipes.find(x=>x.id===id);
+  if(!p)return;
+  if(p.date===iso){renderCal();return;}
+  p.date=iso;
+  persist();render();renderCal();
+  toast('Remarcado para '+fmtDate(iso));
+}
+/* clique num card da semana abre o MESMO modal de edicao; ao salvar, re-renderiza o calendario */
+function openModalFromWeek(id){weekCreateReturn=true;openModal(id);}
 
 function calCellHTML(d,iso,inMonth,tod,week){
   const list=pipesOnDay(iso);
