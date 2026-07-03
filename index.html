@@ -91,9 +91,6 @@ header{
 .rc.fc.on-ted{background:rgba(91,141,239,.2);color:var(--ag);border-color:var(--ag)}
 .rc.fc-clear{background:rgba(255,128,134,.14);color:var(--red);border:1px solid var(--red)}
 .rc.fc-clear:hover{background:rgba(255,128,134,.24)}
-/* chips de flag compactos: linha discreta, baixa, pra sobrar espaco pro board */
-#flagChips{gap:4px}
-#flagChips .rc{font-size:10.5px;padding:3px 8px;line-height:1.15;min-height:0;border-radius:7px}
 
 .grid-wrap{flex:1;overflow:hidden;display:flex;min-height:0}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);width:100%;overflow:hidden}
@@ -114,6 +111,8 @@ header{
 .col-split-tag b{font-family:'Sora';font-weight:800;color:var(--text,#fff)}
 .col-split-tag[data-fchip]:hover{background:rgba(255,255,255,.09);border-color:var(--line2)}
 .col-split-tag.fon{background:rgba(255,255,255,.12);border-color:var(--line2);color:var(--text)}
+.col-split-clear{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:var(--red);background:rgba(255,128,134,.12);border:1px solid rgba(255,128,134,.4);border-radius:999px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+.col-split-clear:hover{background:rgba(255,128,134,.22)}
 .cs-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .sumcell .ss:has(.ss-split){white-space:normal}
 .ss-split{display:flex;flex-wrap:wrap;gap:4px 8px}
@@ -313,6 +312,61 @@ body.view-dash #dashPage{display:flex}
   .mnav .mnav-lbl{min-width:0;flex:1}
   .dp-grid{grid-template-columns:1fr;gap:13px}
 }
+/* ════════ CALENDÁRIO (pagina completa, mesmo padrao do dashboard) ════════ */
+body.view-cal .sumbar,
+body.view-cal .toolbar,
+body.view-cal .grid-wrap,
+body.view-cal .dropzones{display:none!important}
+#calPage{display:none}
+body.view-cal #calPage{display:flex}
+.calpage{flex:1;flex-direction:column;min-height:0;overflow:hidden;background:var(--bg)}
+.cal-seg{display:flex;gap:2px;background:rgba(0,0,0,.35);border:1px solid var(--line2);border-radius:9px;padding:3px}
+.cal-seg button{font-family:'Manrope';font-weight:700;font-size:12px;border:none;background:transparent;color:var(--muted2);cursor:pointer;border-radius:6px;padding:7px 14px}
+.cal-seg button.on{background:var(--orange);color:#fff}
+.cal-body{flex:1;overflow-y:auto;padding:16px 20px calc(24px + var(--safe-b));scrollbar-width:thin;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;min-height:0}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;flex-shrink:0}
+.cal-dow span{text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:2px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;grid-auto-rows:minmax(96px,1fr);flex:1;min-height:0}
+.cal-grid.week{grid-auto-rows:minmax(300px,1fr)}
+.cal-cell{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:6px 7px;display:flex;flex-direction:column;gap:5px;overflow:hidden;cursor:pointer;transition:background .12s,border-color .12s;min-width:0}
+.cal-cell:hover{background:var(--panel2);border-color:var(--line2)}
+.cal-cell.om{background:rgba(255,255,255,.015);opacity:.5}
+.cal-cell.today{border-color:var(--orange);box-shadow:inset 0 0 0 1px var(--orange)}
+.cal-cell.empty{cursor:default;background:transparent;border-color:transparent}
+.cal-daynum{font-family:'Sora';font-weight:700;font-size:12px;color:var(--muted2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.cal-cell.today .cal-daynum .dn{background:var(--orange);color:#fff;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px}
+.cal-daynum .cnt{font-size:9.5px;font-weight:800;color:var(--muted)}
+.cal-marks{display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;overflow:hidden}
+.cal-mk{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:11px;line-height:1;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
+.cal-more{font-size:9.5px;font-weight:800;color:var(--muted);align-self:center;padding:0 2px}
+.cal-grid.week .cal-marks{gap:4px}
+.cal-grid.week .cal-wlist{display:flex;flex-direction:column;gap:4px;overflow-y:auto;flex:1;min-height:0}
+.cal-wrow{display:flex;align-items:center;gap:6px;font-size:10.5px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.cal-wrow .wc{font-family:'Sora';font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.cal-wrow .wv{font-family:'Sora';font-weight:800;font-size:10px;color:var(--muted2);white-space:nowrap}
+/* painel de dia */
+.cal-day-list{padding:6px 16px 6px;display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto}
+.cal-di{display:flex;align-items:center;gap:10px;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:var(--panel);border-left-width:3px}
+.cal-di-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.cal-di-main{flex:1;min-width:0}
+.cal-di-client{font-family:'Sora';font-weight:700;font-size:13px;line-height:1.2}
+.cal-di-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-di-val{font-family:'Sora';font-weight:800;font-size:13px;flex-shrink:0}
+.cal-day-empty{padding:26px 16px;text-align:center;color:var(--muted);font-style:italic;font-size:13px}
+@media (max-width:720px){
+  body.view-cal #calPage{display:block}
+  .calpage{overflow:visible}
+  .dp-top{position:sticky;top:0;z-index:20}
+  .cal-body{overflow:visible;flex:none;padding:12px}
+  .cal-dow span{font-size:9px}
+  .cal-grid{gap:3px;grid-auto-rows:minmax(62px,1fr)}
+  .cal-grid.week{grid-auto-rows:auto;grid-template-columns:1fr}
+  .cal-grid.week .cal-cell{min-height:auto}
+  .cal-cell{padding:4px 4px;border-radius:7px;gap:3px}
+  .cal-daynum{font-size:11px}
+  .cal-mk{width:15px;height:15px;font-size:9px;border-radius:4px}
+  .cal-seg button{padding:7px 11px}
+}
 .toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--line2);color:var(--text);font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:130;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -376,6 +430,10 @@ body.view-dash #dashPage{display:flex}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
       <span class="bt">Metas</span>
     </button>
+    <button class="btn btn-ghost" id="btnCal" title="Calendário dos pipes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span class="bt">Calendário</span>
+    </button>
     <button class="btn btn-ghost" id="btnHist" title="Histórico (ganhos e perdidos)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
       <span class="bt">Histórico</span>
@@ -415,13 +473,6 @@ body.view-dash #dashPage{display:flex}
       <div class="rc dc" data-d="nw">Semana que vem</div>
       <div class="rc dc" data-d="cm">Mês atual</div>
     </div>
-    <div class="rchips" id="flagChips">
-      <div class="rc fc fc-seg"  data-f="seg">🛡️ Seguros</div>
-      <div class="rc fc fc-con"  data-f="con">🏠 Consórcio</div>
-      <div class="rc fc fc-prev" data-f="prev">💼 Previdência</div>
-      <div class="rc fc fc-ted"  data-f="ted">💸 TED</div>
-      <div class="rc fc-clear" id="flagClear" style="display:none">✕ Limpar</div>
-    </div>
   </div>
 </div>
 
@@ -444,6 +495,40 @@ body.view-dash #dashPage{display:flex}
     <button class="dp-edit" id="dashEditToggle">&#9998; Editar metas</button>
   </div>
   <div class="dp-body"><div id="dashBody"></div></div>
+</div>
+
+<!-- pagina completa: Calendario dos pipes -->
+<div class="calpage" id="calPage">
+  <div class="dp-top">
+    <button class="dp-back" id="calBack">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      Board
+    </button>
+    <div class="dp-title">Calendário<span class="dp-sub">Pipes por data prevista</span></div>
+    <div class="cal-seg" id="calModeSeg">
+      <button data-mode="month" class="on">Mês</button>
+      <button data-mode="week">Semana</button>
+    </div>
+    <div class="mnav">
+      <button id="calPrev" title="Anterior">&lsaquo;</button>
+      <span class="mnav-lbl" id="calLbl">&mdash;</span>
+      <button id="calNext" title="Próximo">&rsaquo;</button>
+      <button class="mnav-today" id="calToday" title="Voltar a hoje">Hoje</button>
+    </div>
+  </div>
+  <div class="cal-body">
+    <div class="cal-dow" id="calDow"></div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+</div>
+
+<!-- modal detalhe do dia -->
+<div class="overlay" id="calDayOverlay">
+  <div class="modal" style="max-width:440px">
+    <div class="mhead"><h2 id="calDayTitle">Dia</h2><button class="xbtn" id="calDayClose">&times;</button></div>
+    <div class="cal-day-list" id="calDayList"></div>
+    <div class="mfoot"><div class="right"><button class="btn btn-ghost" id="calDayCloseBtn">Fechar</button></div></div>
+  </div>
 </div>
 
 <!-- drop zones -->
@@ -572,10 +657,19 @@ function matchFlag(p,f){
   if(f==='ted') return p.cat==='cap'&&subtypeOf(p)==='TED';
   return false;
 }
-/* passa se casar com QUALQUER flag ativo (logica OU). Sem flags ativos => passa tudo */
-function passFlag(p){
-  if(!activeFlags.size)return true;
-  for(const f of activeFlags){if(matchFlag(p,f))return true;}
+/* escopo dos flags por coluna: cada flag so age na coluna a que pertence.
+   crossell {seg,con} -> coluna Crossell; captacao {prev,ted} -> coluna Captacao.
+   Alocacao (ag) e RV nao tem flags -> nunca filtradas por esses flags. */
+const COL_FLAGS={cross:['seg','con'],cap:['prev','ted']};
+/* passa (escopado a UMA coluna). scopeFlags = flags que agem nessa coluna.
+   Se NENHUM flag do escopo dessa coluna estiver ativo => mostra tudo da coluna.
+   Se houver flag(s) do escopo ativo(s) => mostra so quem casa (uniao/OU).
+   Flags ativos de OUTRAS colunas nao afetam esta coluna. */
+function passFlag(p,scopeFlags){
+  if(!scopeFlags||!scopeFlags.length)return true;           // coluna sem flags (ag/rv): nunca filtra
+  const on=scopeFlags.filter(f=>activeFlags.has(f));
+  if(!on.length)return true;                                // nenhum flag do escopo ativo => tudo
+  for(const f of on){if(matchFlag(p,f))return true;}         // casa com algum flag ativo do escopo
   return false;
 }
 /* alterna um flag (toggle individual) */
@@ -664,11 +758,12 @@ function sortPipes(arr){
     return da-db;                                        // prazo mais proximo no topo; sem data por ultimo
   });
 }
-function visForCats(cats){
+function visForCats(cats,colId){
+  const scope=COL_FLAGS[colId]||null;   // so a coluna dona dos flags e filtrada
   return sortPipes(pipes.filter(p=>{
     if(!cats.includes(p.cat))return false;
     if(isSnoozed(p))return false;
-    if(!passFlag(p))return false;
+    if(!passFlag(p,scope))return false;
     if(filterRank!=='all'&&rankOf(+p.nota)!==filterRank)return false;
     if(filterDate!=='all'&&!dateInRange(p.date,filterDate))return false;
     if(q){const t=(p.client+' '+p.next+' '+p.notes+' '+(p.stage||'')+' '+(p.subtype||'')).toLowerCase();if(!t.includes(q.toLowerCase()))return false;}
@@ -706,7 +801,7 @@ function renderSumbar(){
 
 function renderGrid(){
   document.getElementById('grid').innerHTML=COLUMNS.map(col=>{
-    const items=visForCats(col.cats);
+    const items=visForCats(col.cats,col.id);
     const sum=items.reduce((a,p)=>a+(+p.value||0),0);
     const cards=items.length?items.map(p=>cardHTML(p,col.mixed)).join(''):`<div class="empty-col">Sem pipes aqui.</div>`;
     const dots=col.mixed
@@ -714,12 +809,17 @@ function renderGrid(){
       : `<div class="col-dot" style="background:${catById(col.cats[0]).color}"></div>`;
     const presetCat=col.mixed?'seg':col.cats[0];
     let splitRow='';
+    /* clear discreto: aparece so quando ha filtro ativo no escopo desta coluna */
+    const scopeF=COL_FLAGS[col.id]||[];
+    const scopeActive=scopeF.some(f=>activeFlags.has(f));
+    const clearChip=scopeActive?`<span class="col-split-clear" data-fclear="${col.id}">✕ limpar</span>`:'';
     if(col.mixed){
       const segSum=items.filter(p=>p.cat==='seg').reduce((a,p)=>a+(+p.value||0),0);
       const conSum=items.filter(p=>p.cat==='con').reduce((a,p)=>a+(+p.value||0),0);
       splitRow=`<div class="col-split">
         <span class="col-split-tag" data-fchip="seg"><span class="cs-dot" style="background:var(--seg)"></span>Seguros <b>${brlFull(segSum)}</b></span>
         <span class="col-split-tag" data-fchip="con"><span class="cs-dot" style="background:var(--con)"></span>Consórcio <b>${brlFull(conSum)}</b></span>
+        ${clearChip}
       </div>`;
     }
     else if(col.id==='cap'){
@@ -728,6 +828,7 @@ function renderGrid(){
       splitRow=`<div class="col-split">
         <span class="col-split-tag" data-fchip="prev"><span class="cs-dot" style="background:var(--cap)"></span>Previdência <b>${brlFull(prevSum)}</b></span>
         <span class="col-split-tag" data-fchip="ted"><span class="cs-dot" style="background:var(--ag)"></span>TED <b>${brlFull(tedSum)}</b></span>
+        ${clearChip}
       </div>`;
     }
     return `<div class="col">
@@ -752,6 +853,15 @@ function renderGrid(){
     tag.style.cursor='pointer';
     tag.onclick=()=>toggleFlag(tag.dataset.fchip);
   });
+  document.querySelectorAll('.col-split-clear[data-fclear]').forEach(btn=>{
+    btn.onclick=()=>clearColFlags(btn.dataset.fclear);
+  });
+}
+/* limpa apenas os flags do escopo de UMA coluna (nao mexe nas outras) */
+function clearColFlags(colId){
+  const scope=COL_FLAGS[colId]||[];
+  scope.forEach(f=>activeFlags.delete(f));
+  renderGrid();syncFlagChips();
 }
 
 function cardHTML(p,showCat){
@@ -773,14 +883,10 @@ function cardHTML(p,showCat){
 }
 
 function syncFlagChips(){
-  document.querySelectorAll('.rc.fc[data-f]').forEach(c=>{
-    c.classList.toggle('on-'+c.dataset.f,activeFlags.has(c.dataset.f));
-  });
+  /* estado visual dos filtros vive nos split-tags das colunas (a linha #flagChips foi removida) */
   document.querySelectorAll('.col-split-tag[data-fchip]').forEach(t=>{
     t.classList.toggle('fon',activeFlags.has(t.dataset.fchip));
   });
-  const clr=document.getElementById('flagClear');
-  if(clr)clr.style.display=activeFlags.size?'block':'none';
 }
 function render(){renderHeaderTotal();renderSumbar();renderGrid();}
 
@@ -1219,6 +1325,162 @@ function wireDashEdit(){
   };
 }
 
+/* ════════ CALENDÁRIO ════════ */
+/* icone + cor por pipe (usa CATS; captacao distingue Previdencia/TED por subtype) */
+function pipeIcon(p){
+  if(!p)return'•';
+  if(p.cat==='seg')return'🛡️';
+  if(p.cat==='con')return'🏠';
+  if(p.cat==='rv') return'📈';
+  if(p.cat==='ag') return'🏦';
+  if(p.cat==='cap'){
+    const s=subtypeOf(p);
+    if(s==='Previdência')return'💼';
+    if(s==='TED')return'💸';
+    return'💰';
+  }
+  return'•';
+}
+function pipeColor(p){
+  if(p&&p.cat==='cap'){
+    const s=subtypeOf(p);
+    if(s==='Previdência')return'var(--cap)';
+    if(s==='TED')return'var(--ag)';
+  }
+  return catById(p.cat).color;
+}
+/* estado independente do calendario */
+let calMode='month';
+let calY=new Date().getFullYear(), calM=new Date().getMonth();
+let calWeek=weekStart(new Date());   // Date do inicio (segunda) da semana em vista Semana
+const DOW_PT=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayYmd(){return ymd(new Date());}
+/* pipes ativos (nao arquivados) com date == dia; ignora sem date, sem erro */
+function pipesOnDay(iso){
+  try{
+    return sortPipes((pipes||[]).filter(p=>p&&p.date===iso&&!isSnoozed(p)));
+  }catch(e){return [];}
+}
+
+function openCal(){
+  view='cal';
+  const n=new Date();calY=n.getFullYear();calM=n.getMonth();calWeek=weekStart(n);
+  document.body.classList.add('view-cal');
+  renderCal();
+}
+function closeCal(){view='board';document.body.classList.remove('view-cal');}
+function calSetMode(m){calMode=m;document.querySelectorAll('#calModeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));renderCal();}
+function calShift(delta){
+  if(calMode==='month'){
+    let m=calM+delta,y=calY;
+    while(m<0){m+=12;y--;} while(m>11){m-=12;y++;}
+    calM=m;calY=y;
+  }else{
+    const d=new Date(calWeek);d.setDate(d.getDate()+delta*7);calWeek=weekStart(d);
+  }
+  renderCal();
+}
+function calReset(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();calWeek=weekStart(n);renderCal();}
+
+function renderCal(){
+  const dow=document.getElementById('calDow');
+  if(dow)dow.innerHTML=DOW_PT.map(d=>`<span>${d}</span>`).join('');
+  const lbl=document.getElementById('calLbl');
+  const grid=document.getElementById('calGrid');
+  if(!grid)return;
+  const tod=todayYmd();
+
+  if(calMode==='month'){
+    grid.className='cal-grid';
+    if(lbl){try{lbl.textContent=new Date(calY,calM,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});}catch(e){lbl.textContent='';}}
+    const first=new Date(calY,calM,1);
+    const start=weekStart(first);            // segunda da 1a semana (pode ser mes anterior)
+    let html='';
+    for(let i=0;i<42;i++){                    // 6 semanas x 7
+      const d=new Date(start);d.setDate(start.getDate()+i);
+      const iso=ymd(d);
+      const inMonth=d.getMonth()===calM;
+      html+=calCellHTML(d,iso,inMonth,tod,false);
+    }
+    grid.innerHTML=html;
+  }else{
+    grid.className='cal-grid week';
+    const ws=new Date(calWeek), we=new Date(calWeek);we.setDate(ws.getDate()+6);
+    if(lbl){
+      try{
+        const a=ws.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+        const b=we.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+        lbl.textContent=a+' – '+b;
+      }catch(e){lbl.textContent='';}
+    }
+    let html='';
+    for(let i=0;i<7;i++){
+      const d=new Date(ws);d.setDate(ws.getDate()+i);
+      html+=calCellHTML(d,ymd(d),true,tod,true);
+    }
+    grid.innerHTML=html;
+  }
+  grid.querySelectorAll('.cal-cell[data-iso]').forEach(c=>{
+    c.onclick=()=>openCalDay(c.dataset.iso);
+  });
+}
+
+function calCellHTML(d,iso,inMonth,tod,week){
+  const list=pipesOnDay(iso);
+  const isToday=iso===tod;
+  const cls=['cal-cell'];
+  if(!inMonth)cls.push('om');
+  if(isToday)cls.push('today');
+  const daynum=`<div class="cal-daynum"><span class="dn">${d.getDate()}</span>${list.length?`<span class="cnt">${list.length}</span>`:''}</div>`;
+  let content;
+  if(week){
+    /* vista semana: lista os pipes do dia */
+    content=list.length
+      ? `<div class="cal-wlist">${list.map(p=>`<div class="cal-wrow" style="border-left:3px solid ${pipeColor(p)}"><span>${pipeIcon(p)}</span><span class="wc">${esc(p.client)}</span><span class="wv">${brl(p.value)}</span></div>`).join('')}</div>`
+      : '';
+  }else{
+    /* vista mes: marcadores por categoria + "+N" se estourar */
+    const MAX=4;
+    const shown=list.slice(0,MAX);
+    const extra=list.length-shown.length;
+    content=`<div class="cal-marks">${shown.map(p=>`<span class="cal-mk" style="background:${pipeColor(p)}22;border-color:${pipeColor(p)}66" title="${esc(p.client)}">${pipeIcon(p)}</span>`).join('')}${extra>0?`<span class="cal-more">+${extra}</span>`:''}</div>`;
+  }
+  return `<div class="${cls.join(' ')}" data-iso="${iso}">${daynum}${content}</div>`;
+}
+
+let calDayIso=null;
+function openCalDay(iso){
+  calDayIso=iso;
+  const list=pipesOnDay(iso);
+  const t=document.getElementById('calDayTitle');
+  try{t.textContent=new Date(iso+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});}catch(e){t.textContent=iso;}
+  const el=document.getElementById('calDayList');
+  if(!list.length){el.innerHTML='<div class="cal-day-empty">Nenhum pipe previsto para este dia.</div>';}
+  else{
+    el.innerHTML=list.map(p=>{
+      const cat=catById(p.cat);
+      const col=pipeColor(p);
+      const sub=(p.cat==='cap'&&p.subtype)?' · '+esc(p.subtype):'';
+      return `<div class="cal-di" data-id="${p.id}" style="border-left-color:${col}">
+        <div class="cal-di-ic" style="background:${col}22">${pipeIcon(p)}</div>
+        <div class="cal-di-main">
+          <div class="cal-di-client">${esc(p.client)}</div>
+          <div class="cal-di-meta">${cat.name}${sub} · ${esc(p.stage||'')}</div>
+        </div>
+        <div class="cal-di-val">${brlFull(p.value)}</div>
+      </div>`;
+    }).join('');
+    el.querySelectorAll('.cal-di[data-id]').forEach(it=>{
+      it.style.cursor='pointer';
+      it.onclick=()=>{closeCalDay();closeCal();openModal(it.dataset.id);};
+    });
+  }
+  document.getElementById('calDayOverlay').classList.add('open');
+}
+function closeCalDay(){document.getElementById('calDayOverlay').classList.remove('open');}
+
 /* ── toast ── */
 let toastT;
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
@@ -1265,6 +1527,15 @@ function wire(){
   document.getElementById('btnHist').onclick=openHist;
   document.getElementById('btnDash').onclick=openDash;
   document.getElementById('dashBack').onclick=closeDash;
+  document.getElementById('btnCal').onclick=openCal;
+  document.getElementById('calBack').onclick=closeCal;
+  document.querySelectorAll('#calModeSeg button').forEach(b=>{b.onclick=()=>calSetMode(b.dataset.mode);});
+  document.getElementById('calPrev').onclick=()=>calShift(-1);
+  document.getElementById('calNext').onclick=()=>calShift(1);
+  document.getElementById('calToday').onclick=calReset;
+  document.getElementById('calDayClose').onclick=closeCalDay;
+  document.getElementById('calDayCloseBtn').onclick=closeCalDay;
+  document.getElementById('calDayOverlay').onclick=e=>{if(e.target.id==='calDayOverlay')closeCalDay();};
   document.getElementById('dashEditToggle').onclick=()=>{dashEditing=!dashEditing;renderDash();};
   document.getElementById('dashPrev').onclick=()=>dashShiftMonth(-1);
   document.getElementById('dashNext').onclick=()=>dashShiftMonth(1);
@@ -1279,10 +1550,7 @@ function wire(){
   document.querySelectorAll('.rc[data-d]').forEach(chip=>{
     chip.onclick=()=>{filterDate=chip.dataset.d;document.querySelectorAll('.rc[data-d]').forEach(c=>c.classList.toggle('on',c.dataset.d===filterDate));renderGrid();};
   });
-  document.querySelectorAll('.rc.fc[data-f]').forEach(chip=>{
-    chip.onclick=()=>toggleFlag(chip.dataset.f);
-  });
-  const fclr=document.getElementById('flagClear');if(fclr)fclr.onclick=()=>{activeFlags.clear();renderGrid();syncFlagChips();};
+  /* filtros seg/con/prev/ted agora sao acionados pelos split-tags das colunas (ver renderGrid) */
   syncFlagChips();
   document.getElementById('overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
   document.getElementById('snzClose').onclick=closeSnooze;
@@ -1290,7 +1558,7 @@ function wire(){
   document.getElementById('snzSave').onclick=snoozeSave;
   document.getElementById('snoozeOverlay').onclick=e=>{if(e.target.id==='snoozeOverlay')closeSnooze();};
   document.querySelectorAll('.snz-presets button').forEach(b=>{b.onclick=()=>{const dd=new Date();dd.setDate(dd.getDate()+(+b.dataset.add));document.getElementById('snzDate').value=dd.toISOString().slice(0,10);};});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();closeSnooze();if(view==='dash')closeDash();}});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeHist();closeSnooze();closeCalDay();if(view==='dash')closeDash();if(view==='cal')closeCal();}});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();});
   window.addEventListener('pagehide',persist);
 }
