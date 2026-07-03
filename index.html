@@ -91,6 +91,9 @@ header{
 .rc.fc.on-ted{background:rgba(91,141,239,.2);color:var(--ag);border-color:var(--ag)}
 .rc.fc-clear{background:rgba(255,128,134,.14);color:var(--red);border:1px solid var(--red)}
 .rc.fc-clear:hover{background:rgba(255,128,134,.24)}
+/* chips de flag compactos: linha discreta, baixa, pra sobrar espaco pro board */
+#flagChips{gap:4px}
+#flagChips .rc{font-size:10.5px;padding:3px 8px;line-height:1.15;min-height:0;border-radius:7px}
 
 .grid-wrap{flex:1;overflow:hidden;display:flex;min-height:0}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);width:100%;overflow:hidden}
@@ -557,18 +560,28 @@ function loadHistSync(){
 }
 
 let pipes=[], history=[], filterRank='all', filterDate='all', q='', editId=null, selNota=5;
-/* filtro clicavel de crossell/subtipo: null|'seg'|'con'|'prev'|'ted' */
-let filterFlag=null;
+/* filtros clicaveis de crossell/subtipo em MULTI-SELECAO (uniao/OU): 'seg'|'con'|'prev'|'ted' */
+let activeFlags=new Set();
 /* subtipo normalizado: pipes de captacao sem subtype contam como 'Outros' */
 function subtypeOf(p){return (p&&p.cat==='cap')?(p.subtype||'Outros'):'';}
-/* um pipe passa no filtro clicavel atual? */
+/* um pipe casa com UM flag especifico? seg/con por cat; prev/ted por subtype dentro de captacao */
+function matchFlag(p,f){
+  if(f==='seg')return p.cat==='seg';
+  if(f==='con')return p.cat==='con';
+  if(f==='prev')return p.cat==='cap'&&subtypeOf(p)==='Previdência';
+  if(f==='ted') return p.cat==='cap'&&subtypeOf(p)==='TED';
+  return false;
+}
+/* passa se casar com QUALQUER flag ativo (logica OU). Sem flags ativos => passa tudo */
 function passFlag(p){
-  if(!filterFlag)return true;
-  if(filterFlag==='seg')return p.cat==='seg';
-  if(filterFlag==='con')return p.cat==='con';
-  if(filterFlag==='prev')return p.cat==='cap'&&subtypeOf(p)==='Previdência';
-  if(filterFlag==='ted') return p.cat==='cap'&&subtypeOf(p)==='TED';
-  return true;
+  if(!activeFlags.size)return true;
+  for(const f of activeFlags){if(matchFlag(p,f))return true;}
+  return false;
+}
+/* alterna um flag (toggle individual) */
+function toggleFlag(f){
+  if(activeFlags.has(f))activeFlags.delete(f); else activeFlags.add(f);
+  renderGrid();syncFlagChips();
 }
 
 async function init(){
@@ -737,7 +750,7 @@ function renderGrid(){
   document.querySelectorAll('.add-btn').forEach(btn=>{btn.onclick=()=>openModal(null,btn.dataset.cat);});
   document.querySelectorAll('.col-split-tag[data-fchip]').forEach(tag=>{
     tag.style.cursor='pointer';
-    tag.onclick=()=>{const f=tag.dataset.fchip;filterFlag=(filterFlag===f)?null:f;renderGrid();syncFlagChips();};
+    tag.onclick=()=>toggleFlag(tag.dataset.fchip);
   });
 }
 
@@ -761,14 +774,13 @@ function cardHTML(p,showCat){
 
 function syncFlagChips(){
   document.querySelectorAll('.rc.fc[data-f]').forEach(c=>{
-    const on=filterFlag===c.dataset.f;
-    c.classList.toggle('on-'+c.dataset.f,on);
+    c.classList.toggle('on-'+c.dataset.f,activeFlags.has(c.dataset.f));
   });
   document.querySelectorAll('.col-split-tag[data-fchip]').forEach(t=>{
-    t.classList.toggle('fon',filterFlag===t.dataset.fchip);
+    t.classList.toggle('fon',activeFlags.has(t.dataset.fchip));
   });
   const clr=document.getElementById('flagClear');
-  if(clr)clr.style.display=filterFlag?'block':'none';
+  if(clr)clr.style.display=activeFlags.size?'block':'none';
 }
 function render(){renderHeaderTotal();renderSumbar();renderGrid();}
 
@@ -778,9 +790,42 @@ function zoneAt(x,y){for(const dz of document.querySelectorAll('.dz')){const r=d
 function highlightZones(x,y){document.querySelectorAll('.dz').forEach(dz=>{const r=dz.getBoundingClientRect();dz.classList.toggle('hot',x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom);});}
 function clearZones(){document.querySelectorAll('.dz').forEach(dz=>dz.classList.remove('hot'));}
 
+/* ── auto-scroll: rola a coluna sob o cursor quando o drag chega perto da borda,
+   sem interromper o drag (o card mantem pointer capture, entao o scroll
+   programatico nao gera pointercancel) ── */
+let autoScrollRAF=null, autoScrollY=0, autoScrollTarget=null;
+function colBodyAt(x,y){
+  const els=document.elementsFromPoint(x,y);
+  for(const el of els){const cb=el.closest&&el.closest('.col-body');if(cb)return cb;}
+  return null;
+}
+function updateAutoScroll(x,y){
+  const EDGE=64, MAX=16;
+  const cb=colBodyAt(x,y);
+  let vy=0;
+  if(cb){
+    const r=cb.getBoundingClientRect();
+    if(y<r.top+EDGE)         vy=-MAX*Math.min(1,(r.top+EDGE-y)/EDGE);
+    else if(y>r.bottom-EDGE) vy= MAX*Math.min(1,(y-(r.bottom-EDGE))/EDGE);
+  }
+  autoScrollY=vy; autoScrollTarget=cb;
+  if(vy&&!autoScrollRAF)autoScrollRAF=requestAnimationFrame(autoScrollStep);
+}
+function autoScrollStep(){
+  autoScrollRAF=null;
+  if(drag&&autoScrollY&&autoScrollTarget){
+    autoScrollTarget.scrollTop+=autoScrollY;
+    highlightZones(drag.lastX,drag.lastY);
+    autoScrollRAF=requestAnimationFrame(autoScrollStep);
+  }
+}
+function stopAutoScroll(){autoScrollY=0;autoScrollTarget=null;if(autoScrollRAF){cancelAnimationFrame(autoScrollRAF);autoScrollRAF=null;}}
+
 function attachCard(card){
   const id=card.dataset.id;
-  let sx=0,sy=0,started=false,moved=false,holdTimer=null,pid=null;
+  let sx=0,sy=0,started=false,moved=false,holdTimer=null,pid=null,captured=false;
+  function capture(){try{card.setPointerCapture(pid);captured=true;}catch(e){captured=false;}}
+  function release(){try{if(captured)card.releasePointerCapture(pid);}catch(e){}captured=false;}
   function begin(ev){
     started=true;moved=true;
     const r=card.getBoundingClientRect();
@@ -789,29 +834,42 @@ function attachCard(card){
     clone.style.width=r.width+'px';clone.style.left=r.left+'px';clone.style.top=r.top+'px';
     document.body.appendChild(clone);
     document.body.classList.add('dragging');
-    drag={id,card,clone,offX:ev.clientX-r.left,offY:ev.clientY-r.top};
+    drag={id,card,clone,offX:ev.clientX-r.left,offY:ev.clientY-r.top,lastX:ev.clientX,lastY:ev.clientY};
     card.classList.add('drag-src');
     document.getElementById('dropzones').classList.add('show');
-    try{card.setPointerCapture(pid);}catch(e){}
+    capture(); /* prende o ponteiro ao card: o scroll da coluna nao mata mais o drag */
   }
   function onMove(ev){
     if(!started){
       if(Math.abs(ev.clientX-sx)>8||Math.abs(ev.clientY-sy)>8){
         moved=true;clearTimeout(holdTimer);
-        if(ev.pointerType==='mouse')begin(ev); else finish(ev,false);
+        if(ev.pointerType==='mouse'){begin(ev);}
+        else{
+          /* movimento antes do hold em touch = intencao de rolar: encerra sem drag,
+             deixando o navegador rolar a coluna normalmente */
+          finish(ev,false);
+        }
       }
       return;
     }
     ev.preventDefault();
+    drag.lastX=ev.clientX;drag.lastY=ev.clientY;
     drag.clone.style.left=(ev.clientX-drag.offX)+'px';
     drag.clone.style.top=(ev.clientY-drag.offY)+'px';
     highlightZones(ev.clientX,ev.clientY);
+    updateAutoScroll(ev.clientX,ev.clientY);
   }
   function onUp(ev){finish(ev,true);}
-  function onCancel(ev){finish(ev,false);}
-  function detach(){window.removeEventListener('pointermove',onMove);window.removeEventListener('pointerup',onUp);window.removeEventListener('pointercancel',onCancel);}
+  function onCancel(ev){
+    /* iniciado + com captura: um pointercancel espurio (scroll) NAO deve matar o
+       drag. Enquanto tivermos a captura do ponteiro, ignoramos o cancel. */
+    if(started&&captured&&drag)return;
+    finish(ev,false);
+  }
+  function onLost(ev){/* perdeu a captura durante o drag: finaliza no local atual */ if(started)finish(ev,true);}
+  function detach(){card.removeEventListener('pointermove',onMove);card.removeEventListener('pointerup',onUp);card.removeEventListener('pointercancel',onCancel);card.removeEventListener('lostpointercapture',onLost);}
   function finish(ev,allow){
-    clearTimeout(holdTimer);detach();
+    clearTimeout(holdTimer);stopAutoScroll();release();detach();
     if(started){
       const out=allow?zoneAt(ev.clientX,ev.clientY):null;
       if(drag&&drag.clone)drag.clone.remove();
@@ -829,11 +887,16 @@ function attachCard(card){
   card.addEventListener('pointerdown',ev=>{
     if(ev.target.closest('.pc-del'))return;
     if(ev.button!==undefined&&ev.button>0)return;
-    sx=ev.clientX;sy=ev.clientY;started=false;moved=false;pid=ev.pointerId;
+    sx=ev.clientX;sy=ev.clientY;started=false;moved=false;pid=ev.pointerId;captured=false;
+    /* Listeners no proprio card: apos begin() capturamos o ponteiro, e a captura
+       roteia todos os eventos pro card, sobrevivendo ao scroll/re-layout da coluna. */
+    card.addEventListener('pointermove',onMove,{passive:false});
+    card.addEventListener('pointerup',onUp);
+    card.addEventListener('pointercancel',onCancel);
+    card.addEventListener('lostpointercapture',onLost);
+    /* Nao capturamos aqui: deixa o dedo rolar a coluna normalmente antes do hold.
+       So no hold (begin) capturamos, blindando o drag ativo contra o scroll. */
     if(ev.pointerType!=='mouse')holdTimer=setTimeout(()=>begin(ev),200);
-    window.addEventListener('pointermove',onMove,{passive:false});
-    window.addEventListener('pointerup',onUp);
-    window.addEventListener('pointercancel',onCancel);
   });
 }
 
@@ -1217,9 +1280,9 @@ function wire(){
     chip.onclick=()=>{filterDate=chip.dataset.d;document.querySelectorAll('.rc[data-d]').forEach(c=>c.classList.toggle('on',c.dataset.d===filterDate));renderGrid();};
   });
   document.querySelectorAll('.rc.fc[data-f]').forEach(chip=>{
-    chip.onclick=()=>{const f=chip.dataset.f;filterFlag=(filterFlag===f)?null:f;renderGrid();syncFlagChips();};
+    chip.onclick=()=>toggleFlag(chip.dataset.f);
   });
-  const fclr=document.getElementById('flagClear');if(fclr)fclr.onclick=()=>{filterFlag=null;renderGrid();syncFlagChips();};
+  const fclr=document.getElementById('flagClear');if(fclr)fclr.onclick=()=>{activeFlags.clear();renderGrid();syncFlagChips();};
   syncFlagChips();
   document.getElementById('overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
   document.getElementById('snzClose').onclick=closeSnooze;
