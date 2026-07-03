@@ -542,8 +542,8 @@ body.view-cal.cal-week .wk-grid{display:grid}
     </button>
     <div class="dp-title">Calendário<span class="dp-sub">Pipes por data prevista</span></div>
     <div class="cal-seg" id="calModeSeg">
-      <button data-mode="month" class="on">Mês</button>
-      <button data-mode="week">Semana</button>
+      <button data-mode="week" class="on">Semana</button>
+      <button data-mode="month">Mês</button>
     </div>
     <div class="mnav">
       <button id="calPrev" title="Anterior">&lsaquo;</button>
@@ -1428,7 +1428,7 @@ function pipeColor(p){
   return catById(p.cat).color;
 }
 /* estado independente do calendario */
-let calMode='month';
+let calMode='week';
 let calY=new Date().getFullYear(), calM=new Date().getMonth();
 let calWeek=weekStart(new Date());   // Date do inicio (segunda) da semana em vista Semana
 const DOW_PT=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
