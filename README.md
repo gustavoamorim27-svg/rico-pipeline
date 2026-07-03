@@ -1,2 +1,2 @@
 # rico-pipeline
-Kanban de pipes RICO.
+Kanban de pipes RICO. Calendário abre na semana.
