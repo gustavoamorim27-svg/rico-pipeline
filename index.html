@@ -14,6 +14,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23F26522'/%3E%3Crect x='11' y='14' width='26' height='5' rx='2.5' fill='%23fff'/%3E%3Crect x='14.5' y='23.5' width='19' height='5' rx='2.5' fill='%23fff'/%3E%3Crect x='18' y='33' width='12' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#070B2E; --bg2:#0A0E3F; --panel:#111840; --panel2:#171F52;
@@ -525,6 +527,10 @@ body.view-cal.cal-week .wk-grid{display:grid}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       <span class="bt">Backup</span>
     </button>
+    <button class="btn btn-ghost" id="btnCloud" title="Backup na nuvem (sincronizar entre dispositivos)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+      <span class="bt" id="cloudBtnLabel">Nuvem</span>
+    </button>
     <button class="btn btn-primary" id="btnAdd">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
       <span class="bt">Novo pipe</span>
@@ -669,6 +675,36 @@ body.view-cal.cal-week .wk-grid{display:grid}
   </div>
 </div>
 
+<!-- modal nuvem -->
+<div class="overlay" id="cloudOverlay">
+  <div class="modal" style="max-width:460px">
+    <div class="mhead"><h2>☁ Nuvem</h2><button class="xbtn" id="cloudClose">&times;</button></div>
+    <div class="mbody" style="grid-template-columns:1fr;gap:14px">
+      <div class="field full">
+        <label>Seu código de sincronização</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="cloudCode" readonly style="font-family:'Sora';font-weight:700;letter-spacing:2px;text-align:center">
+          <button class="btn btn-ghost" id="cloudCopy" type="button" style="flex-shrink:0">Copiar</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5">Use este código para acessar seus pipes em outro dispositivo. Guarde-o em lugar seguro. O backup é <b>automático</b>.</div>
+      </div>
+      <div class="field full" style="border-top:1px solid var(--line);padding-top:12px">
+        <label>Restaurar de outro código</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="cloudRestoreCode" placeholder="XXXX-XXXX-XXXX" style="font-family:'Sora';letter-spacing:2px;text-transform:uppercase">
+          <button class="btn btn-ghost" id="cloudRestore" type="button" style="flex-shrink:0">Restaurar</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5">Isto vai <b>substituir</b> os dados deste dispositivo pelos da nuvem.</div>
+      </div>
+      <div class="field full" style="border-top:1px solid var(--line);padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-size:13px;color:var(--muted2)" id="cloudStatus2">☁ Sincronização na nuvem</div>
+        <button class="btn btn-primary" id="cloudSaveNow" type="button" style="flex-shrink:0">Salvar agora</button>
+      </div>
+    </div>
+    <div class="mfoot"><div class="right"><button class="btn btn-ghost" id="cloudCloseBtn">Fechar</button></div></div>
+  </div>
+</div>
+
 <input type="file" id="importFile" accept="application/json,.json" style="display:none">
 <div class="toast" id="toast"></div>
 
@@ -791,6 +827,151 @@ function persist(){
   try{localStorage.setItem(HBACKUP,hj);}catch(e){}
   try{localStorage.setItem(INITF,'1');}catch(e){}
   idbSet('pipes',pipes); idbSet('history',history);
+  try{cloudScheduleBackup();}catch(e){}
+}
+
+/* ════════ BACKUP / SINCRONIZAÇÃO NA NUVEM (Firebase Firestore) ════════
+   Extra por cima do cache local. Se o SDK/rede falhar, o app segue 100%
+   funcional no localStorage — nenhum caminho de nuvem pode travar nada. */
+const CLOUD_ID_KEY='ricoPipeline.cloudId';
+const CLOUD_COLLECTION='ricoPipeline';
+const firebaseConfig={
+  apiKey:"AIzaSyBLf_FAZ6ZVl_BonLefRgSqW10RXxxf-xQ",
+  authDomain:"rico-hub.firebaseapp.com",
+  projectId:"rico-hub",
+  storageBucket:"rico-hub.firebasestorage.app",
+  messagingSenderId:"338592565594",
+  appId:"1:338592565594:web:e9fae97d56eed68cb38b63"
+};
+let cloudDb=null, cloudReady=false, cloudBackupTimer=null;
+function cloudInit(){
+  try{
+    if(typeof firebase==='undefined')return;
+    if(!firebase.apps||!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+    cloudDb=firebase.firestore();
+    cloudReady=true;
+  }catch(e){cloudReady=false;cloudDb=null;}
+}
+/* gera código legível XXXX-XXXX-XXXX (maiúsculas + dígitos, sem ambíguos) */
+function cloudGenCode(){
+  const abc='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out='';
+  for(let g=0;g<3;g++){
+    if(g)out+='-';
+    for(let i=0;i<4;i++)out+=abc.charAt(Math.floor(Math.random()*abc.length));
+  }
+  return out;
+}
+function cloudGetId(){
+  let id=null;
+  try{id=localStorage.getItem(CLOUD_ID_KEY);}catch(e){}
+  if(!id){
+    id=cloudGenCode();
+    try{localStorage.setItem(CLOUD_ID_KEY,id);}catch(e){}
+  }
+  return id;
+}
+/* snapshot de TODAS as chaves ricoPipeline.* (menos o próprio cloudId) */
+function cloudSnapshot(){
+  const data={};
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.indexOf('ricoPipeline.')===0&&k!==CLOUD_ID_KEY){
+        data[k]=localStorage.getItem(k);
+      }
+    }
+  }catch(e){}
+  return data;
+}
+function cloudSetStatus(txt){
+  try{
+    const el=document.getElementById('cloudBtnLabel');if(el)el.textContent=txt;
+    const s2=document.getElementById('cloudStatus2');if(s2&&txt&&txt.indexOf('☁')===0)s2.textContent=txt;
+  }catch(e){}
+}
+function cloudTimeStr(){const d=new Date();return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+/* backup imediato (usado pelo debounce e pelo botão "Salvar agora") */
+function cloudBackupNow(silent){
+  if(!cloudReady||!cloudDb){if(!silent)cloudSetStatus('☁ offline (só local)');return Promise.resolve(false);}
+  let id;try{id=cloudGetId();}catch(e){return Promise.resolve(false);}
+  if(!silent)cloudSetStatus('☁ salvando…');
+  try{
+    return cloudDb.collection(CLOUD_COLLECTION).doc(id).set({
+      data:cloudSnapshot(),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      savedAtLocal:Date.now()
+    }).then(()=>{cloudSetStatus('☁ salvo '+cloudTimeStr());return true;})
+      .catch(()=>{cloudSetStatus('☁ offline (só local)');return false;});
+  }catch(e){cloudSetStatus('☁ offline (só local)');return Promise.resolve(false);}
+}
+/* backup automático debounced (~1,5s) */
+function cloudScheduleBackup(){
+  if(!cloudReady)return;
+  try{
+    clearTimeout(cloudBackupTimer);
+    cloudBackupTimer=setTimeout(()=>{cloudBackupNow(true);},1500);
+  }catch(e){}
+}
+/* restaura a partir de um código: grava as chaves de volta e recarrega */
+function cloudRestore(code){
+  code=(code||'').trim().toUpperCase();
+  if(!code){toast('Digite um código');return;}
+  if(!cloudReady||!cloudDb){toast('Nuvem indisponível (sem rede)');return;}
+  toast('Buscando na nuvem…');
+  try{
+    cloudDb.collection(CLOUD_COLLECTION).doc(code).get().then(snap=>{
+      if(!snap.exists){toast('Código não encontrado');return;}
+      const payload=snap.data()||{};
+      const data=payload.data||{};
+      const keys=Object.keys(data);
+      if(!keys.length){toast('Backup vazio na nuvem');return;}
+      if(!confirm('Restaurar '+keys.length+' registro(s) da nuvem?\n\nISTO VAI SUBSTITUIR os dados deste dispositivo pelos da nuvem.'))return;
+      try{
+        for(let i=0;i<keys.length;i++){
+          const k=keys[i];
+          if(k&&k.indexOf('ricoPipeline.')===0&&k!==CLOUD_ID_KEY){
+            try{localStorage.setItem(k,data[k]);}catch(e){}
+          }
+        }
+      }catch(e){}
+      toast('Restaurado ✓ recarregando…');
+      setTimeout(()=>{try{location.reload();}catch(e){}},700);
+    }).catch(()=>{toast('Erro ao buscar na nuvem');});
+  }catch(e){toast('Erro ao buscar na nuvem');}
+}
+function openCloud(){
+  try{
+    const ov=document.getElementById('cloudOverlay');if(!ov)return;
+    const codeEl=document.getElementById('cloudCode');if(codeEl)codeEl.value=cloudGetId();
+    if(!cloudReady){const s2=document.getElementById('cloudStatus2');if(s2)s2.textContent='☁ Nuvem indisponível (sem rede) — backup só local';}
+    ov.classList.add('open');
+  }catch(e){}
+}
+function closeCloud(){try{document.getElementById('cloudOverlay').classList.remove('open');}catch(e){}}
+function wireCloud(){
+  try{
+    const b=document.getElementById('btnCloud');if(b)b.onclick=openCloud;
+    const c=document.getElementById('cloudClose');if(c)c.onclick=closeCloud;
+    const cb=document.getElementById('cloudCloseBtn');if(cb)cb.onclick=closeCloud;
+    const ov=document.getElementById('cloudOverlay');if(ov)ov.onclick=e=>{if(e.target.id==='cloudOverlay')closeCloud();};
+    const cp=document.getElementById('cloudCopy');if(cp)cp.onclick=()=>{
+      const v=document.getElementById('cloudCode').value;
+      try{navigator.clipboard.writeText(v);toast('Código copiado ✓');}
+      catch(e){try{const t=document.getElementById('cloudCode');t.select();document.execCommand('copy');toast('Código copiado ✓');}catch(_){toast('Copie manualmente');}}
+    };
+    const sn=document.getElementById('cloudSaveNow');if(sn)sn.onclick=()=>{toast('Salvando na nuvem…');cloudBackupNow(false).then(ok=>{if(ok)toast('Salvo na nuvem ✓');});};
+    const rs=document.getElementById('cloudRestore');if(rs)rs.onclick=()=>cloudRestore(document.getElementById('cloudRestoreCode').value);
+  }catch(e){}
+}
+/* inicializa a camada de nuvem sem travar nada se o SDK não carregar */
+function cloudBoot(){
+  try{
+    cloudInit();
+    wireCloud();
+    if(cloudReady){cloudSetStatus('☁ Nuvem');cloudScheduleBackup();}
+    else{cloudSetStatus('Nuvem');}
+  }catch(e){}
 }
 
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);}
@@ -1353,11 +1534,11 @@ function loadGoals(){
     return g;
   }catch(e){return Object.assign({},DEFAULT_GOALS);}
 }
-function saveGoals(){try{localStorage.setItem(GOALS_KEY,JSON.stringify(goals));}catch(e){}}
+function saveGoals(){try{localStorage.setItem(GOALS_KEY,JSON.stringify(goals));}catch(e){}try{cloudScheduleBackup();}catch(e){}}
 const MANUAL_KEY='ricoPipeline.manualReal';
 let manualReal={};
 function loadManual(){try{const raw=localStorage.getItem(MANUAL_KEY);manualReal=raw?(JSON.parse(raw)||{}):{};}catch(e){manualReal={};}}
-function saveManual(){try{localStorage.setItem(MANUAL_KEY,JSON.stringify(manualReal));}catch(e){}}
+function saveManual(){try{localStorage.setItem(MANUAL_KEY,JSON.stringify(manualReal));}catch(e){}try{cloudScheduleBackup();}catch(e){}}
 function manualKey(){return dashY+'-'+dashM;}
 function manualFor(key){const mk=manualReal[manualKey()];return (mk&&+mk[key])||0;}
 const PACE_KEYS=['cap','aloc','rv'];
@@ -1915,6 +2096,7 @@ function wire(){
 }
 
 init();
+try{cloudBoot();}catch(e){}
 </script>
 </body>
 </html>
