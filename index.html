@@ -150,12 +150,12 @@ header{
 .pc-rank.C{background:rgba(255,128,134,.16);color:var(--red)}
 .pc-val{font-family:'Sora';font-weight:800;font-size:15px;color:#fff;margin-bottom:6px}
 .pc-sub{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;background:rgba(70,200,138,.16);color:var(--green);padding:3px 8px;border-radius:5px;margin-bottom:8px;align-self:flex-start;text-transform:uppercase;letter-spacing:.5px}
-.allocbox{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.allocchk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted2);background:rgba(0,0,0,.35);border:1px solid var(--line2);border-radius:8px;padding:11px 12px;cursor:pointer;user-select:none;min-width:0}
-.allocchk input{width:16px;height:16px;accent-color:var(--orange);margin:0}
-.allocchk.on{border-color:var(--orange);color:#fff;background:rgba(242,101,34,.12)}
-.pc-alloc{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.pc-alloc span{font-size:9.5px;font-weight:700;background:rgba(91,141,239,.16);color:var(--blue);padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px}
+.allocbox{display:flex;flex-wrap:wrap;gap:8px}
+.allocchk{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#dfe8fb;background:rgba(255,255,255,.05);border:1.5px solid var(--line2);border-radius:9px;padding:11px 15px;cursor:pointer;user-select:none;min-height:44px;box-sizing:border-box}
+.allocchk input{width:19px;height:19px;accent-color:var(--orange);margin:0}
+.allocchk.on{border-color:var(--orange);color:#fff;background:rgba(242,101,34,.16)}
+.pc-alloc{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.pc-alloc span{font-size:11px;font-weight:700;background:rgba(91,141,239,.20);color:#bcd2ff;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px}
 .sc-pace{font-size:12px;font-weight:700;color:var(--muted2);margin:3px 0 7px}
 .sc-pace b{color:var(--orange)}
 .dash-mnote{font-size:11px;color:var(--muted);margin:-4px 0 10px}
@@ -347,8 +347,6 @@ body.view-cal #calPage{display:flex}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;flex-shrink:0}
 .cal-dow span{text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:2px 0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;grid-auto-rows:minmax(96px,1fr);flex:1;min-height:0}
-.cal-dow.nowk{grid-template-columns:repeat(5,1fr)}
-.cal-grid.nowk{grid-template-columns:repeat(5,1fr)}
 .cal-grid.week{grid-auto-rows:minmax(300px,1fr)}
 .cal-cell{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:6px 7px;display:flex;flex-direction:column;gap:5px;overflow:hidden;cursor:pointer;transition:background .12s,border-color .12s;min-width:0}
 .cal-cell:hover{background:var(--panel2);border-color:var(--line2)}
@@ -422,11 +420,10 @@ body.view-cal.cal-week .wk-grid{display:grid}
 .cal-cell.nonbiz .cal-daynum{color:var(--muted)}
 .cal-cell.nonbiz:hover{opacity:.82;background:rgba(255,255,255,.04)}       /* ao passar o mouse, reafloram */
 .cal-cell.nonbiz.today{opacity:1}                                         /* hoje nunca some, mesmo não útil */
-.cal-cell.holiday{background:rgba(242,183,5,.07);border-color:rgba(242,183,5,.35)}
+.cal-cell.holiday{background:rgba(242,183,5,.045);border-color:rgba(242,183,5,.18)}
 /* rótulo discreto do feriado (ex.: "Natal") */
-.cal-cell .cal-hol{display:inline-flex;align-items:center;align-self:flex-start;gap:3px;font-size:9px;font-weight:800;letter-spacing:.2px;
-  color:var(--yellow);background:rgba(242,183,5,.16);border:1px solid rgba(242,183,5,.4);border-radius:5px;padding:1px 5px;line-height:1.25;
-  white-space:nowrap;overflow:hidden;max-width:100%;text-overflow:ellipsis;margin:0 0 1px;flex-shrink:0}
+.cal-cell .cal-hol{display:block;font-size:8.5px;font-weight:800;line-height:1.1;letter-spacing:.2px;
+  color:var(--yellow);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:-1px 0 1px;flex-shrink:0}
 /* — VISÃO SEMANA — colunas de dias não úteis mais ESTREITAS e ESMAECIDAS.
    As larguras (fr) são aplicadas via grid-template-columns inline em renderWeekKanban();
    aqui cuidamos do esmaecimento e do conteúdo colapsado. */
@@ -1749,7 +1746,6 @@ let calMode='week';
 let calY=new Date().getFullYear(), calM=new Date().getMonth();
 let calWeek=weekStart(new Date());   // Date do inicio (segunda) da semana em vista Semana
 const DOW_PT=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
-const WEEKDAYS_PT=['Seg','Ter','Qua','Qui','Sex'];
 
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function todayYmd(){return ymd(new Date());}
@@ -1782,7 +1778,7 @@ function calReset(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();ca
 
 function renderCal(){
   const dow=document.getElementById('calDow');
-  if(dow){dow.className='cal-dow nowk';dow.innerHTML=WEEKDAYS_PT.map(d=>`<span>${d}</span>`).join('');}
+  if(dow)dow.innerHTML=DOW_PT.map(d=>`<span>${d}</span>`).join('');
   const lbl=document.getElementById('calLbl');
   const grid=document.getElementById('calGrid');
   if(!grid)return;
@@ -1790,13 +1786,13 @@ function renderCal(){
 
   if(calMode==='month'){
     document.body.classList.remove('cal-week');
-    grid.className='cal-grid nowk';
+    grid.className='cal-grid';
     if(lbl){try{lbl.textContent=new Date(calY,calM,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});}catch(e){lbl.textContent='';}}
     const first=new Date(calY,calM,1);
     const start=weekStart(first);            // segunda da 1a semana (pode ser mes anterior)
     let html='';
-    for(let w=0;w<6;w++)for(let j=0;j<5;j++){   // 6 semanas x 5 dias uteis (Seg-Sex)
-      const d=new Date(start);d.setDate(start.getDate()+w*7+j);
+    for(let i=0;i<42;i++){                    // 6 semanas x 7
+      const d=new Date(start);d.setDate(start.getDate()+i);
       const iso=ymd(d);
       const inMonth=d.getMonth()===calM;
       html+=calCellHTML(d,iso,inMonth,tod,false);
@@ -1827,18 +1823,25 @@ function renderWeekKanban(ws,tod){
   /* larguras das 7 colunas: dias úteis largos, não úteis estreitos */
   const cols=[];
   let html='';
-  for(let i=0;i<5;i++){                       // Seg-Sex (fins de semana ocultos)
+  for(let i=0;i<7;i++){
     const d=new Date(ws);d.setDate(ws.getDate()+i);
     const iso=ymd(d);
-    cols.push('1fr');
+    cols.push(isNonBusiness(iso)?'0.42fr':'1.35fr');
     const list=pipesOnDay(iso);
     const isToday=iso===tod;
     const hol=holidayName(iso);
+    const nonbiz=isNonBusiness(iso);
+    /* MESMOS cards da principal: showCat=true p/ identificar categoria em cada dia */
     const cards=list.length?list.map(p=>cardHTML(p,true)).join(''):'<div class="wk-empty">Sem pipes.</div>';
+    /* dias não úteis: coluna estreita/esmaecida. Se houver pipes, mantém a contagem em destaque
+       (indicador) e os cards continuam acessíveis (compactos/roláveis; hover clareia). */
     const colCls=['wk-col'];
     if(isToday)colCls.push('today');
-    if(hol)colCls.push('holiday');             // feriado (B3 fechada): destacado, com tag
-    const holTag=hol?`<span class="wk-hol" title="B3 fechada · ${esc(hol)}">🔴 ${esc(hol)}</span>`:'';
+    if(nonbiz)colCls.push('nonbiz');
+    if(hol)colCls.push('holiday');
+    if(nonbiz&&list.length)colCls.push('has-pipes');   // colapsada mas com pipes => badge visível
+    /* cabeçalho: feriado mostra o nome; dias não úteis mostram contagem como "pill" */
+    const holTag=hol?`<span class="wk-hol" title="${esc(hol)}">${esc(hol)}</span>`:'';
     html+=`<div class="${colCls.join(' ')}" data-iso="${iso}">
       <div class="wk-head" title="${nonbiz?(hol?esc(hol):'Fim de semana'):''}">
         <span class="wk-dow">${DOW_PT[i]}</span>
@@ -1954,12 +1957,14 @@ function calCellHTML(d,iso,inMonth,tod,week){
   const list=pipesOnDay(iso);
   const isToday=iso===tod;
   const hol=holidayName(iso);
+  const nonbiz=isNonBusiness(iso);
   const cls=['cal-cell'];
   if(!inMonth)cls.push('om');
   if(isToday)cls.push('today');
-  if(hol)cls.push('holiday');              // feriado (B3 fechada) — destacado, não escondido
-  /* tag do feriado (B3 fechada) */
-  const holLbl=hol?`<span class="cal-hol" title="B3 fechada · ${esc(hol)}">🔴 ${esc(hol)}</span>`:'';
+  if(nonbiz)cls.push('nonbiz');            // fim de semana ou feriado => de-enfatizado
+  if(hol)cls.push('holiday');
+  /* rótulo discreto do feriado (ex.: "Natal") */
+  const holLbl=hol?`<span class="cal-hol" title="${esc(hol)}">${esc(hol)}</span>`:'';
   const daynum=`<div class="cal-daynum"><span class="dn">${d.getDate()}</span>${list.length?`<span class="cnt">${list.length}</span>`:''}</div>`;
   let content;
   if(week){
