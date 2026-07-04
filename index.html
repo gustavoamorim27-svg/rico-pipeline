@@ -148,6 +148,15 @@ header{
 .pc-rank.C{background:rgba(255,128,134,.16);color:var(--red)}
 .pc-val{font-family:'Sora';font-weight:800;font-size:15px;color:#fff;margin-bottom:6px}
 .pc-sub{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;background:rgba(70,200,138,.16);color:var(--green);padding:3px 8px;border-radius:5px;margin-bottom:8px;align-self:flex-start;text-transform:uppercase;letter-spacing:.5px}
+.allocbox{display:flex;flex-wrap:wrap;gap:7px}
+.allocchk{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted2);background:rgba(0,0,0,.35);border:1px solid var(--line2);border-radius:8px;padding:9px 12px;cursor:pointer;user-select:none}
+.allocchk input{width:16px;height:16px;accent-color:var(--orange);margin:0}
+.allocchk.on{border-color:var(--orange);color:#fff;background:rgba(242,101,34,.12)}
+.pc-alloc{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.pc-alloc span{font-size:9.5px;font-weight:700;background:rgba(91,141,239,.16);color:var(--blue);padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px}
+.sc-pace{font-size:12px;font-weight:700;color:var(--muted2);margin:3px 0 7px}
+.sc-pace b{color:var(--orange)}
+.dash-mnote{font-size:11px;color:var(--muted);margin:-4px 0 10px}
 .pc-nota{display:flex;align-items:center;gap:6px;margin-bottom:7px}
 .pc-nota-num{font-family:'Sora';font-weight:700;font-size:12px;width:14px;flex-shrink:0;text-align:right}
 .pc-dots{display:flex;gap:2px;align-items:center}
@@ -345,9 +354,9 @@ body.view-cal #calPage{display:flex}
 .cal-daynum{font-family:'Sora';font-weight:700;font-size:12px;color:var(--muted2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .cal-cell.today .cal-daynum .dn{background:var(--orange);color:#fff;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px}
 .cal-daynum .cnt{font-size:9.5px;font-weight:800;color:var(--muted)}
-.cal-marks{display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;overflow:hidden}
-.cal-mk{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:11px;line-height:1;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
-.cal-more{font-size:9.5px;font-weight:800;color:var(--muted);align-self:center;padding:0 2px}
+.cal-marks{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;overflow:hidden}
+.cal-mk{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:15px;line-height:1;flex-shrink:0;border:1px solid rgba(255,255,255,.16)}
+.cal-more{font-size:12px;font-weight:800;color:var(--muted2);align-self:center;padding:0 3px}
 .cal-grid.week .cal-marks{gap:4px}
 .cal-grid.week .cal-wlist{display:flex;flex-direction:column;gap:4px;overflow-y:auto;flex:1;min-height:0}
 .cal-wrow{display:flex;align-items:center;gap:6px;font-size:10.5px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
@@ -395,7 +404,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
   .cal-grid.week .cal-cell{min-height:auto}
   .cal-cell{padding:4px 4px;border-radius:7px;gap:3px}
   .cal-daynum{font-size:11px}
-  .cal-mk{width:15px;height:15px;font-size:9px;border-radius:4px}
+  .cal-mk{width:22px;height:22px;font-size:13px;border-radius:6px}
   .cal-seg button{padding:7px 11px}
   .wk-grid{grid-template-columns:1fr;gap:8px}
   .wk-col{border-bottom:6px solid var(--bg)}
@@ -617,6 +626,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
       <div class="field full"><label>Cliente</label><input id="f-client" placeholder="Nome do cliente"></div>
       <div class="field"><label>Categoria</label><select id="f-cat"></select></div>
       <div class="field" id="subtypeField" style="display:none"><label>Tipo de captação</label><select id="f-subtype"></select></div>
+      <div class="field full" id="allocField" style="display:none"><label>O que vou alocar</label><div class="allocbox" id="allocBox"></div></div>
       <div class="field"><label>Estágio</label><select id="f-stage"></select></div>
       <div class="field full"><label>Nota de temperatura (0 = frio · 10 = fechando)</label><div class="np" id="notaPicker"></div></div>
       <div class="field"><label>Valor potencial (R$)</label><select id="f-value"></select></div>
@@ -680,11 +690,13 @@ const COLUMNS=[
 ];
 const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão','Aceito falta push'];
 const SUBTYPES=['Previdência','TED','STVM','PJ','Consultoria','Originação','Outros'];
-const NEXT_ACTIONS=['Enviar Proposta','Entrar em contato depois','Continuar Desenvolvendo','Marcar Reunião','Aguardar Resposta','Esperar Produto Porrada'];
+const NEXT_ACTIONS=['Enviar Proposta','Continuar Desenvolvendo','Esperar o Cliente pensar'];
+const ALLOC_OPTS=['RV','Recorrentes','COE','RF'];
 function valueRange(cat){
   if(cat==='seg')return[3000,5000,10000,15000,20000,30000,40000,50000,60000];
   if(cat==='con')return[100000,150000,200000,300000,500000,750000,1000000,1500000,2000000,2500000,3000000];
   if(cat==='cap')return[50000,60000,70000,80000,90000,100000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
+  if(cat==='ag')return[30000,40000,50000,60000,70000,80000,90000,100000,110000,120000,130000,140000,150000,160000,170000,180000,190000,200000,250000,300000,350000,400000,450000,500000];
   return[30000,40000,50000,60000,70000,80000,90000,100000,150000,200000,250000,300000,350000,400000,450000,500000];
 }
 
@@ -996,6 +1008,7 @@ function cardHTML(p,showCat){
   const od=overdue(p.date);
   const catrow=showCat?`<div class="pc-catrow"><span class="cat-dot" style="background:${cat.color}"></span>${cat.name}</div>`:'';
   const subchip=(p.cat==='cap'&&p.subtype)?`<div class="pc-sub">${esc(p.subtype)}</div>`:'';
+  const allocrow=(p.cat==='ag'&&Array.isArray(p.alloc)&&p.alloc.length)?`<div class="pc-alloc">${p.alloc.map(a=>`<span>${esc(a)}</span>`).join('')}</div>`:'';
   return `<div class="pcard" data-id="${p.id}" style="border-left-color:${cat.color}">
     <div class="pc-grip" aria-label="Arrastar" title="Arraste para mover"><svg viewBox="0 0 6 16" fill="currentColor"><circle cx="1.5" cy="2" r="1.3"/><circle cx="4.5" cy="2" r="1.3"/><circle cx="1.5" cy="8" r="1.3"/><circle cx="4.5" cy="8" r="1.3"/><circle cx="1.5" cy="14" r="1.3"/><circle cx="4.5" cy="14" r="1.3"/></svg></div>
     <button class="pc-del" title="Excluir" aria-label="Excluir">✕</button>
@@ -1003,6 +1016,7 @@ function cardHTML(p,showCat){
     <div class="pc-top"><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
     <div class="pc-val">${brlFull(p.value)}</div>
     ${subchip}
+    ${allocrow}
     <div class="pc-nota"><span class="pc-nota-num" style="color:${RCO[rank]}">${nota}</span><div class="pc-dots">${dots}</div></div>
     ${p.next?`<div class="pc-next" title="${esc(p.next)}">→ ${esc(p.next)}</div>`:'<div class="pc-next" style="color:var(--muted);font-style:italic">Sem próxima ação</div>'}
     <div class="pc-foot"><span class="pc-stage">${esc(p.stage)}</span><span class="pc-date ${od?'od':''}">${fmtDate(p.date)}${od?' ⚠':''}</span></div>
@@ -1202,6 +1216,13 @@ function fillSelects(){
   document.getElementById('f-subtype').innerHTML=SUBTYPES.map(s=>`<option>${s}</option>`).join('');
 }
 function toggleSubtype(){document.getElementById('subtypeField').style.display=document.getElementById('f-cat').value==='cap'?'flex':'none';}
+function toggleAlloc(){document.getElementById('allocField').style.display=document.getElementById('f-cat').value==='ag'?'flex':'none';}
+function buildAllocBox(sel){
+  const box=document.getElementById('allocBox');const arr=sel||[];
+  box.innerHTML=ALLOC_OPTS.map(o=>`<label class="allocchk${arr.includes(o)?' on':''}"><input type="checkbox" value="${esc(o)}"${arr.includes(o)?' checked':''}>${esc(o)}</label>`).join('');
+  box.querySelectorAll('input').forEach(inp=>inp.onchange=()=>inp.closest('.allocchk').classList.toggle('on',inp.checked));
+}
+function getAlloc(){return [...document.querySelectorAll('#allocBox input:checked')].map(i=>i.value);}
 function buildNextSelect(cur){
   const sel=document.getElementById('f-next');
   let opts=NEXT_ACTIONS.slice();
@@ -1218,7 +1239,7 @@ function buildValueSelect(cat,cur,preserve){
   sel.value=String(all.includes(cur)?cur:vals[0]);
 }
 function onCatChange(){
-  toggleSubtype();
+  toggleSubtype();toggleAlloc();
   buildValueSelect(document.getElementById('f-cat').value, +document.getElementById('f-value').value||0, false);
 }
 function openModal(id,presetCat){
@@ -1233,9 +1254,10 @@ function openModal(id,presetCat){
   buildNP(p.nota==null?5:p.nota);
   buildNextSelect(p.next);
   buildValueSelect(document.getElementById('f-cat').value, p.value, true);
+  buildAllocBox(p.alloc||[]);
   document.getElementById('f-date').value=p.date||'';
   document.getElementById('f-notes').value=p.notes||'';
-  toggleSubtype();
+  toggleSubtype();toggleAlloc();
   document.getElementById('overlay').classList.add('open');
   /* sem foco automático: evita abrir o teclado no iPad */
 }
@@ -1252,7 +1274,8 @@ function saveModal(){
     subtype:cat==='cap'?document.getElementById('f-subtype').value:'',
     nota:selNota,value:parseNum(document.getElementById('f-value').value),
     date:document.getElementById('f-date').value,next:document.getElementById('f-next').value,
-    notes:document.getElementById('f-notes').value.trim()};
+    notes:document.getElementById('f-notes').value.trim(),
+    alloc:cat==='ag'?getAlloc():[]};
   if(editId){Object.assign(pipes.find(x=>x.id===editId),data);}
   else{pipes.unshift(Object.assign({id:uid()},data));}
   persist();render();closeModal();
@@ -1331,6 +1354,21 @@ function loadGoals(){
   }catch(e){return Object.assign({},DEFAULT_GOALS);}
 }
 function saveGoals(){try{localStorage.setItem(GOALS_KEY,JSON.stringify(goals));}catch(e){}}
+const MANUAL_KEY='ricoPipeline.manualReal';
+let manualReal={};
+function loadManual(){try{const raw=localStorage.getItem(MANUAL_KEY);manualReal=raw?(JSON.parse(raw)||{}):{};}catch(e){manualReal={};}}
+function saveManual(){try{localStorage.setItem(MANUAL_KEY,JSON.stringify(manualReal));}catch(e){}}
+function manualKey(){return dashY+'-'+dashM;}
+function manualFor(key){const mk=manualReal[manualKey()];return (mk&&+mk[key])||0;}
+const PACE_KEYS=['cap','aloc','rv'];
+function bizDaysRemaining(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const monthEnd=new Date(dashY,dashM+1,0);
+  if(dashY<now.getFullYear()||(dashY===now.getFullYear()&&dashM<now.getMonth()))return 0;
+  let start=(dashY===now.getFullYear()&&dashM===now.getMonth())?new Date(now):new Date(dashY,dashM,1);
+  let n=0;for(let dd=new Date(start);dd<=monthEnd;dd.setDate(dd.getDate()+1)){if(!isNonBusiness(ymd(dd)))n++;}
+  return n;
+}
 
 /* soma value de um array filtrando por categorias e por um predicado */
 function sumByCats(arr,cats,fn){
@@ -1377,7 +1415,7 @@ function goalDefs(){
 /* toggle board/dash */
 function showBoard(){view='board';document.body.classList.remove('view-dash');}
 function openDash(){
-  goals=loadGoals();dashEditing=false;view='dash';
+  goals=loadGoals();loadManual();dashEditing=false;view='dash';
   document.body.classList.add('view-dash');
   renderDash();
 }
@@ -1414,7 +1452,7 @@ function renderDash(){
   let cards='';
   goalDefs().forEach(g=>{
     const meta=+goals[g.key]||0;
-    const real=realizedByCats(g.cats,g.fn);
+    const real=realizedByCats(g.cats,g.fn)+manualFor(g.key);
     const rk=pipelineByRank(g.cats,g.fn);
     /* cenarios acumulativos: A subset A+B subset A+B+C */
     const ruim =real+rk.a;              // so os A fecham
@@ -1435,6 +1473,7 @@ function renderDash(){
         <div class="sc-meta">Meta <b>${brlFull(meta)}</b></div>
       </div>
       <div class="sc-real">Realizado <b>${brlFull(real)}</b> · <span class="rp" style="color:${hitReal?'var(--green)':col}">${pctTxt(real,meta)}</span>${hitReal?' · 🏆 batida':''}</div>
+      ${PACE_KEYS.includes(g.key)?(()=>{const days=bizDaysRemaining();const falta=Math.max(0,meta-real);const pace=days>0?falta/days:0;return `<div class="sc-pace">${hitReal?'🏆 meta batida':(days>0?`Pace: <b>${brlFull(pace)}</b>/dia útil · faltam ${days} dia(s) útil(eis)`:'Mês encerrado')}</div>`;})():''}
       <div class="sc-bar">
         <div class="sc-seg real" style="width:${wReal}%;background:${hitReal?'var(--green)':col}"></div>
         <div class="sc-seg a" style="left:${wReal}%;width:${wA}%;background:${col}"></div>
@@ -1471,6 +1510,9 @@ function renderDashEdit(){
   rows.forEach(r=>{
     h+=`<div class="dash-editrow"><label>${r.name}</label><input type="text" inputmode="numeric" id="goal-${r.key}" value="${brlFull(+goals[r.key]||0)}"></div>`;
   });
+  h+='<div class="dash-mtitle" style="margin-top:18px">Realizado já feito no mês (manual)</div>';
+  h+='<div class="dash-mnote">Para ter controle total: some aqui o que você fez fora do app. Os pipes marcados como Ganho no mês já entram automaticamente.</div>';
+  rows.forEach(r=>{h+=`<div class="dash-editrow"><label>${r.name}</label><input type="text" inputmode="numeric" id="manual-${r.key}" value="${brlFull(manualFor(r.key))}"></div>`;});
   h+=`<div class="dash-edit-actions">
     <button class="btn btn-ghost" id="dashResetGoals">Restaurar padrão</button>
     <button class="btn btn-primary" id="dashSaveGoals">Salvar metas</button>
@@ -1483,7 +1525,9 @@ function wireDashEdit(){
       const el=document.getElementById('goal-'+k);
       if(el)goals[k]=parseNum(el.value);
     });
-    saveGoals();dashEditing=false;renderDash();toast('Metas salvas ✓');
+    const mk=manualKey();manualReal[mk]=manualReal[mk]||{};
+    GOAL_KEYS.forEach(k=>{const el=document.getElementById('manual-'+k);if(el)manualReal[mk][k]=parseNum(el.value);});
+    saveGoals();saveManual();dashEditing=false;renderDash();toast('Metas e realizado salvos ✓');
   };
   document.getElementById('dashResetGoals').onclick=()=>{
     goals=Object.assign({},DEFAULT_GOALS);
@@ -1749,7 +1793,7 @@ function calCellHTML(d,iso,inMonth,tod,week){
       : '';
   }else{
     /* vista mes: marcadores por categoria + "+N" se estourar */
-    const MAX=4;
+    const MAX=3;
     const shown=list.slice(0,MAX);
     const extra=list.length-shown.length;
     content=`<div class="cal-marks">${shown.map(p=>`<span class="cal-mk" style="background:${pipeColor(p)}22;border-color:${pipeColor(p)}66" title="${esc(p.client)}">${pipeIcon(p)}</span>`).join('')}${extra>0?`<span class="cal-more">+${extra}</span>`:''}</div>`;
@@ -1800,7 +1844,7 @@ function doExport(){
   a.download='rico-pipeline-'+new Date().toISOString().slice(0,10)+'.json';a.click();
   toast('Backup baixado ✓');
 }
-function normPipe(p){return{id:p.id||uid(),client:p.client||'',cat:p.cat||'rv',stage:p.stage||'Primeiro contato',subtype:p.subtype||'',nota:+p.nota||0,value:+p.value||0,date:p.date||'',next:p.next||'',notes:p.notes||'',snoozeUntil:p.snoozeUntil,outcome:p.outcome,closedAt:p.closedAt};}
+function normPipe(p){return{id:p.id||uid(),client:p.client||'',cat:p.cat||'rv',stage:p.stage||'Primeiro contato',subtype:p.subtype||'',nota:+p.nota||0,value:+p.value||0,date:p.date||'',next:p.next||'',notes:p.notes||'',alloc:Array.isArray(p.alloc)?p.alloc:[],snoozeUntil:p.snoozeUntil,outcome:p.outcome,closedAt:p.closedAt};}
 function doImport(file){
   const rd=new FileReader();
   rd.onload=()=>{
