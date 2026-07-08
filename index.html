@@ -173,9 +173,6 @@ header{
 .pc-del{position:absolute;top:7px;right:7px;background:none;border:none;cursor:pointer;color:var(--muted);opacity:0;font-size:13px;padding:4px 7px;line-height:1;transition:opacity .12s,color .12s;border-radius:4px}
 .pcard:hover .pc-del{opacity:1}
 .pc-del:hover{color:var(--red);background:rgba(255,128,134,.1)}
-.pc-snz{position:absolute;top:7px;right:30px;background:none;border:none;cursor:pointer;color:var(--muted);opacity:0;font-size:14px;padding:4px 6px;line-height:1;transition:opacity .12s,color .12s;border-radius:4px}
-.pcard:hover .pc-snz{opacity:1}
-.pc-snz:hover{color:var(--blue);background:rgba(91,141,239,.14)}
 .empty-col{font-size:12px;color:var(--muted);text-align:center;padding:20px 8px;font-style:italic}
 
 /* drag clone + dropzones */
@@ -187,9 +184,11 @@ header{
 .dz.win{border-color:var(--green);color:var(--green)}
 .dz.lost{border-color:var(--red);color:var(--red)}
 .dz.snz{border-color:var(--blue);color:var(--blue)}
+.dz.tmr{border-color:var(--yellow);color:var(--yellow)}
 .dz.win.hot{background:rgba(70,200,138,.28);transform:scale(1.08)}
 .dz.lost.hot{background:rgba(255,128,134,.26);transform:scale(1.08)}
 .dz.snz.hot{background:rgba(91,141,239,.26);transform:scale(1.08)}
+.dz.tmr.hot{background:rgba(245,196,74,.26);transform:scale(1.08)}
 
 /* modal */
 .overlay{position:fixed;inset:0;background:rgba(4,7,28,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:16px;z-index:70}
@@ -486,7 +485,6 @@ body.view-cal.cal-week .wk-grid{display:grid}
   .col-body .pcard:last-child{margin-bottom:0}
   .add-btn{margin:0 14px 12px}
   .pc-del{opacity:1;top:8px;right:8px;font-size:15px;padding:6px 9px}
-  .pc-snz{opacity:1;top:8px;right:40px;font-size:18px;padding:6px 8px}
   .pc-client{font-size:14px}.pc-val{font-size:16px}.pc-next{font-size:12px}
   .overlay{padding:0;align-items:flex-end}
   .modal{max-width:100%;max-height:94vh;border-radius:18px 18px 0 0;border-bottom:none}
@@ -624,6 +622,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
 
 <!-- drop zones -->
 <div class="dropzones" id="dropzones">
+  <div class="dz tmr" data-out="tomorrow"><div class="dz-ic">🌙</div><div>Até amanhã</div></div>
   <div class="dz win" data-out="Ganho"><div class="dz-ic">🏆</div><div>Ganhei</div></div>
   <div class="dz snz" data-out="snooze"><div class="dz-ic">💤</div><div>Arquivar até</div></div>
   <div class="dz lost" data-out="Perdido"><div class="dz-ic">🗑️</div><div>Perdido</div></div>
@@ -1171,7 +1170,6 @@ function renderGrid(){
   document.querySelectorAll('.pcard').forEach(card=>{
     attachCard(card);
     card.querySelector('.pc-del').onclick=e=>{e.stopPropagation();quickDel(card.dataset.id);};
-    card.querySelector('.pc-snz').onclick=e=>{e.stopPropagation();snoozeTomorrow(card.dataset.id);};
   });
   document.querySelectorAll('.add-btn').forEach(btn=>{btn.onclick=()=>openModal(null,btn.dataset.cat);});
   document.querySelectorAll('.col-split-tag[data-fchip]').forEach(tag=>{
@@ -1198,7 +1196,6 @@ function cardHTML(p,showCat){
   const allocrow=(p.cat==='ag'&&Array.isArray(p.alloc)&&p.alloc.length)?`<div class="pc-alloc">${p.alloc.map(a=>`<span>${esc(a)}</span>`).join('')}</div>`:'';
   return `<div class="pcard" data-id="${p.id}" style="border-left-color:${cat.color}">
     <div class="pc-grip" aria-label="Arrastar" title="Arraste para mover"><svg viewBox="0 0 6 16" fill="currentColor"><circle cx="1.5" cy="2" r="1.3"/><circle cx="4.5" cy="2" r="1.3"/><circle cx="1.5" cy="8" r="1.3"/><circle cx="4.5" cy="8" r="1.3"/><circle cx="1.5" cy="14" r="1.3"/><circle cx="4.5" cy="14" r="1.3"/></svg></div>
-    <button class="pc-snz" title="Esconder até amanhã" aria-label="Esconder até amanhã">🌙</button>
     <button class="pc-del" title="Excluir" aria-label="Excluir">✕</button>
     ${catrow}
     <div class="pc-top"><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
@@ -1331,7 +1328,6 @@ function makeDraggable(card,opts){
   }
   card.addEventListener('pointerdown',ev=>{
     if(ev.target.closest('.pc-del'))return;
-    if(ev.target.closest('.pc-snz'))return;
     if(ev.button!==undefined&&ev.button>0)return;
     onGrip=!!(ev.target.closest&&ev.target.closest('.pc-grip'));
     sx=ev.clientX;sy=ev.clientY;started=false;moved=false;pid=ev.pointerId;captured=false;
@@ -1366,6 +1362,7 @@ function attachCard(card){
       clearZones();drag=null;
       const id=card.dataset.id;
       if(out==='snooze')openSnooze(id);
+      else if(out==='tomorrow')snoozeTomorrow(id);
       else if(out)closePipe(id,out);
     },
     onTap:id=>openModal(id)
@@ -1878,8 +1875,6 @@ function renderWeekKanban(ws,tod){
     attachWeekCard(card);
     const del=card.querySelector('.pc-del');
     if(del)del.onclick=e=>{e.stopPropagation();quickDelWeek(card.dataset.id);};
-    const snz=card.querySelector('.pc-snz');
-    if(snz)snz.onclick=e=>{e.stopPropagation();snoozeTomorrow(card.dataset.id);};
   });
   /* "+" do dia: cria pipe novo ja com a data daquele dia pre-preenchida */
   wg.querySelectorAll('.wk-add[data-iso]').forEach(btn=>{
