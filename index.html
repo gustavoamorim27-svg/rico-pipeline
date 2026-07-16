@@ -557,6 +557,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
     </div>
     <div class="rchips">
       <div class="rc dc on" data-d="today">📌 Hoje</div>
+      <div class="rc dc" data-d="overdue">⚠ Atrasados</div>
       <div class="rc dc" data-d="all">Todos os prazos</div>
       <div class="rc dc" data-d="cw">📅 Semana atual</div>
       <div class="rc dc" data-d="nw">Semana que vem</div>
@@ -1067,6 +1068,7 @@ function dateInRange(s,mode){
   const d=new Date(s+'T00:00:00');if(isNaN(d))return false;
   const now=new Date();now.setHours(0,0,0,0);
   if(mode==='today')return d.getTime()===now.getTime();
+  if(mode==='overdue')return overdue(s);
   if(mode==='cm')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
   const ws=weekStart(now);
   if(mode==='cw'){const we=new Date(ws);we.setDate(ws.getDate()+7);return d>=ws&&d<we;}
