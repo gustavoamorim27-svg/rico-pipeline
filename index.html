@@ -556,7 +556,8 @@ body.view-cal.cal-week .wk-grid{display:grid}
       <div class="rc" data-r="C">❄️ C · Frio</div>
     </div>
     <div class="rchips">
-      <div class="rc dc on" data-d="all">Todos os prazos</div>
+      <div class="rc dc on" data-d="today">📌 Hoje</div>
+      <div class="rc dc" data-d="all">Todos os prazos</div>
       <div class="rc dc" data-d="cw">📅 Semana atual</div>
       <div class="rc dc" data-d="nw">Semana que vem</div>
       <div class="rc dc" data-d="cm">Mês atual</div>
@@ -767,7 +768,7 @@ function loadHistSync(){
   return null;
 }
 
-let pipes=[], history=[], filterRank='all', filterDate='all', q='', editId=null, selNota=5;
+let pipes=[], history=[], filterRank='all', filterDate='today', q='', editId=null, selNota=5;
 /* filtros clicaveis de crossell/subtipo em MULTI-SELECAO (uniao/OU): 'seg'|'con'|'prev'|'ted' */
 let activeFlags=new Set();
 /* subtipo normalizado: pipes de captacao sem subtype contam como 'Outros' */
@@ -1065,6 +1066,7 @@ function dateInRange(s,mode){
   if(!s)return false;
   const d=new Date(s+'T00:00:00');if(isNaN(d))return false;
   const now=new Date();now.setHours(0,0,0,0);
+  if(mode==='today')return d.getTime()===now.getTime();
   if(mode==='cm')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
   const ws=weekStart(now);
   if(mode==='cw'){const we=new Date(ws);we.setDate(ws.getDate()+7);return d>=ws&&d<we;}
@@ -1378,7 +1380,7 @@ function closePipe(id,outcome){
 }
 function isSnoozed(p){if(!p.snoozeUntil)return false;const d=new Date(p.snoozeUntil+'T00:00:00');return !isNaN(d)&&d>new Date(new Date().toDateString());}
 let snoozeId=null;
-function openSnooze(id){snoozeId=id;const d=new Date();d.setDate(d.getDate()+30);document.getElementById('snzDate').value=d.toISOString().slice(0,10);document.getElementById('snoozeOverlay').classList.add('open');}
+function openSnooze(id){snoozeId=id;const d=new Date();d.setDate(d.getDate()+7);document.getElementById('snzDate').value=d.toISOString().slice(0,10);document.getElementById('snoozeOverlay').classList.add('open');}
 function closeSnooze(){document.getElementById('snoozeOverlay').classList.remove('open');}
 function snoozeSave(){const date=document.getElementById('snzDate').value;if(!date){document.getElementById('snzDate').focus();return;}const p=pipes.find(x=>x.id===snoozeId);if(p){p.snoozeUntil=date;persist();render();toast('Arquivado até '+fmtDate(date));}closeSnooze();}
 function reactivate(id){const p=pipes.find(x=>x.id===id);if(!p)return;delete p.snoozeUntil;persist();renderHist();render();toast('Pipe reativado no quadro');}
