@@ -224,6 +224,25 @@ header{
 .hsum .hs{flex:1;border:1px solid var(--line2);border-radius:10px;padding:9px 12px}
 .hsum .hs .l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
 .hsum .hs .v{font-family:'Sora';font-weight:800;font-size:16px;margin-top:3px}
+/* busca do historico */
+.hist-search-wrap{padding:10px 20px 0;position:relative}
+.hist-search{width:100%;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;color:var(--text);font-family:'Manrope';font-weight:600;font-size:13px;padding:10px 34px 10px 34px;outline:none}
+.hist-search:focus{border-color:var(--orange)}
+.hist-search-ic{position:absolute;left:30px;top:50%;transform:translateY(-45%);font-size:13px;opacity:.6;pointer-events:none}
+.hist-search-clr{position:absolute;right:29px;top:50%;transform:translateY(-45%);background:none;border:none;color:var(--muted2);font-size:15px;cursor:pointer;line-height:1;padding:2px 4px}
+.hist-count{padding:8px 20px 0;font-size:11px;font-weight:700;color:var(--muted)}
+/* aviso de pipes atrasados */
+.latewarn{position:fixed;left:14px;bottom:calc(16px + var(--safe-b));z-index:105;display:none;align-items:center;gap:9px;background:rgba(255,128,134,.14);border:1px solid rgba(255,128,134,.5);color:var(--red);font-family:'Manrope';font-weight:800;font-size:12.5px;padding:10px 14px;border-radius:11px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px);max-width:calc(100vw - 28px)}
+.latewarn.show{display:flex}
+.latewarn:hover{background:rgba(255,128,134,.22)}
+.latewarn .lw-ic{font-size:15px;line-height:1}
+.latewarn .lw-n{background:var(--red);color:#1a0508;border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:900}
+.latewarn .lw-tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.view-dash .latewarn,body.view-cal .latewarn{display:none!important}
+body.dragging .latewarn{display:none!important}
+/* icone de categoria no card */
+.pc-ic{flex-shrink:0;width:24px;height:24px;border-radius:7px;display:inline-grid;place-items:center;font-size:13px;line-height:1;border:1px solid rgba(255,255,255,.14)}
+@media(max-width:720px){.latewarn{font-size:11.5px;padding:9px 12px}.pc-ic{width:22px;height:22px;font-size:12px}}
 .hitem{display:flex;align-items:center;gap:10px;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:var(--panel)}
 .hi-out{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
 .hi-out.Ganho{background:rgba(70,200,138,.18)}
@@ -638,6 +657,11 @@ body.view-cal.cal-week .wk-grid{display:grid}
   </div>
 </div>
 
+<!-- aviso de pipes atrasados -->
+<div class="latewarn" id="lateWarn" role="button" tabindex="0" title="Ver os pipes atrasados">
+  <span class="lw-ic">⚠</span><span class="lw-n" id="lateWarnN">0</span><span class="lw-tx" id="lateWarnTx">pipes atrasados</span>
+</div>
+
 <!-- modal detalhe do dia -->
 <div class="overlay" id="calDayOverlay">
   <div class="modal" style="max-width:440px">
@@ -683,6 +707,12 @@ body.view-cal.cal-week .wk-grid{display:grid}
   <div class="modal">
     <div class="mhead"><h2>Histórico</h2><button class="xbtn" id="histClose">&times;</button></div>
     <div class="hsum" id="histSum"></div>
+    <div class="hist-search-wrap">
+      <span class="hist-search-ic">🔎</span>
+      <input class="hist-search" id="histSearch" type="search" autocomplete="off" placeholder="Buscar por cliente, categoria, tipo ou resultado…">
+      <button class="hist-search-clr" id="histSearchClr" title="Limpar" style="display:none">&times;</button>
+    </div>
+    <div class="hist-count" id="histCount"></div>
     <div class="histlist" id="histList"></div>
     <div class="mfoot"><div class="right"><button class="btn btn-ghost" id="histCloseBtn">Fechar</button></div></div>
   </div>
@@ -1227,7 +1257,7 @@ function cardHTML(p,showCat){
     <div class="pc-grip" aria-label="Arrastar" title="Arraste para mover"><svg viewBox="0 0 6 16" fill="currentColor"><circle cx="1.5" cy="2" r="1.3"/><circle cx="4.5" cy="2" r="1.3"/><circle cx="1.5" cy="8" r="1.3"/><circle cx="4.5" cy="8" r="1.3"/><circle cx="1.5" cy="14" r="1.3"/><circle cx="4.5" cy="14" r="1.3"/></svg></div>
     <button class="pc-del" title="Excluir" aria-label="Excluir">✕</button>
     ${catrow}
-    <div class="pc-top"><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
+    <div class="pc-top"><span class="pc-ic" style="background:${pipeColor(p)}22;border-color:${pipeColor(p)}55" title="${esc(cat.name)}">${pipeIcon(p)}</span><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
     <div class="pc-val">${brlFull(p.value)}</div>
     ${subchip}
     ${allocrow}
@@ -1243,7 +1273,30 @@ function syncFlagChips(){
     t.classList.toggle('fon',activeFlags.has(t.dataset.fchip));
   });
 }
-function render(){renderHeaderTotal();renderSumbar();renderGrid();}
+/* pipes ativos (nao arquivados) com data prevista vencida */
+function latePipes(){
+  try{return (pipes||[]).filter(p=>p&&p.date&&overdue(p.date)&&!isSnoozed(p));}catch(e){return [];}
+}
+function renderLateWarn(){
+  const el=document.getElementById('lateWarn');
+  if(!el)return;
+  const n=latePipes().length;
+  el.classList.toggle('show',n>0);
+  const ne=document.getElementById('lateWarnN'), tx=document.getElementById('lateWarnTx');
+  if(ne)ne.textContent=n;
+  if(tx)tx.textContent=n===1?'pipe atrasado':'pipes atrasados';
+}
+function goToLate(){
+  try{
+    if(view==='dash')closeDash();
+    if(view==='cal')closeCal();
+    filterDate='overdue';
+    document.querySelectorAll('.rc[data-d]').forEach(c=>c.classList.toggle('on',c.dataset.d==='overdue'));
+    renderGrid();
+    toast('Mostrando os pipes atrasados ⚠');
+  }catch(e){}
+}
+function render(){renderHeaderTotal();renderSumbar();renderGrid();renderLateWarn();}
 
 /* ════════ DRAG (touch + mouse) ════════ */
 let drag=null;
@@ -1500,7 +1553,21 @@ function saveModal(){
 function quickDel(id){if(!confirm('Excluir este pipe definitivamente?'))return;pipes=pipes.filter(x=>x.id!==id);persist();render();}
 
 /* ── histórico ── */
-function openHist(){renderHist();document.getElementById('histOverlay').classList.add('open');}
+let histQuery='';
+function normTxt(v){
+  try{return String(v==null?'':v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){return String(v==null?'':v).toLowerCase();}
+}
+/* texto pesquisavel de um registro (ganho/perdido/arquivado) */
+function histHaystack(o,kind){
+  const cat=catById(o.cat);
+  return normTxt([o.client,cat&&cat.name,o.subtype,o.stage,o.notes,kind,o.outcome].filter(Boolean).join(' '));
+}
+function histMatch(o,kind){
+  if(!histQuery)return true;
+  const hay=histHaystack(o,kind);
+  return normTxt(histQuery).split(/\s+/).filter(Boolean).every(t=>hay.indexOf(t)>-1);
+}
+function openHist(){histQuery='';const i=document.getElementById('histSearch');if(i)i.value='';renderHist();document.getElementById('histOverlay').classList.add('open');}
 function closeHist(){document.getElementById('histOverlay').classList.remove('open');}
 function renderHist(){
   const won=history.filter(h=>h.outcome==='Ganho'),lost=history.filter(h=>h.outcome==='Perdido');
@@ -1511,8 +1578,15 @@ function renderHist(){
      <div class="hs"><div class="l">🗑️ Perdidos</div><div class="v" style="color:var(--red)">${brl(ls)}</div><div class="l" style="margin-top:2px">${lost.length} pipe(s)</div></div>
      <div class="hs"><div class="l">💤 Arquivados</div><div class="v" style="color:var(--blue)">${arch.length}</div><div class="l" style="margin-top:2px">aguardando</div></div>`;
   const list=document.getElementById('histList');
-  if(!history.length&&!arch.length){list.innerHTML='<div class="hist-empty">Nada aqui ainda. Arraste um pipe para 🏆, 💤 ou 🗑️.</div>';return;}
-  let html=arch.map(p=>{
+  const cnt=document.getElementById('histCount');
+  const clr=document.getElementById('histSearchClr');
+  if(clr)clr.style.display=histQuery?'block':'none';
+  if(!history.length&&!arch.length){if(cnt)cnt.textContent='';list.innerHTML='<div class="hist-empty">Nada aqui ainda. Arraste um pipe para 🏆, 💤 ou 🗑️.</div>';return;}
+  const archF=arch.filter(p=>histMatch(p,'arquivado'));
+  const histF=(history||[]).filter(h=>histMatch(h,h.outcome==='Ganho'?'ganho':'perdido'));
+  if(cnt)cnt.textContent=histQuery?`${archF.length+histF.length} resultado(s) para “${histQuery}”`:'';
+  if(histQuery&&!archF.length&&!histF.length){list.innerHTML='<div class="hist-empty">Nenhum registro encontrado.</div>';return;}
+  let html=archF.map(p=>{
     const cat=catById(p.cat);
     return `<div class="hitem" data-aid="${p.id}">
       <div class="hi-main">
@@ -1523,7 +1597,7 @@ function renderHist(){
       <div class="hi-act"><button class="reopen" data-act="react">Reativar</button></div>
     </div>`;
   }).join('');
-  html+=history.map(h=>{
+  html+=histF.map(h=>{
     const cat=catById(h.cat);
     return `<div class="hitem" data-id="${h.id}">
       <div class="hi-main">
@@ -1781,6 +1855,10 @@ function pipeIcon(p){
     const s=subtypeOf(p);
     if(s==='Previdência')return'💼';
     if(s==='TED')return'💸';
+    if(s==='STVM')return'📊';
+    if(s==='PJ')return'🏢';
+    if(s==='Consultoria')return'🧭';
+    if(s==='Originação')return'🌱';
     return'💰';
   }
   return'•';
@@ -2195,10 +2273,16 @@ function wire(){
   document.getElementById('histClose').onclick=closeHist;
   document.getElementById('histCloseBtn').onclick=closeHist;
   document.getElementById('histOverlay').onclick=e=>{if(e.target.id==='histOverlay')closeHist();};
+  const hs=document.getElementById('histSearch');
+  if(hs)hs.oninput=()=>{histQuery=hs.value.trim();renderHist();};
+  const hsc=document.getElementById('histSearchClr');
+  if(hsc)hsc.onclick=()=>{histQuery='';if(hs){hs.value='';hs.focus();}renderHist();};
   document.getElementById('search').oninput=e=>{q=e.target.value;renderGrid();};
   document.querySelectorAll('.rc[data-r]').forEach(chip=>{
     chip.onclick=()=>{filterRank=chip.dataset.r;document.querySelectorAll('.rc[data-r]').forEach(c=>{c.className='rc'+(c.dataset.r===filterRank?' on-'+(filterRank==='all'?'all':filterRank.toLowerCase()):'');});renderGrid();};
   });
+  const lw=document.getElementById('lateWarn');
+  if(lw){lw.onclick=goToLate;lw.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goToLate();}};}
   document.querySelectorAll('.rc[data-d]').forEach(chip=>{
     chip.onclick=()=>{filterDate=chip.dataset.d;document.querySelectorAll('.rc[data-d]').forEach(c=>c.classList.toggle('on',c.dataset.d===filterDate));renderGrid();};
   });
