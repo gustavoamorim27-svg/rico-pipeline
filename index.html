@@ -359,6 +359,25 @@ body.view-cal #calPage{display:flex}
 .cal-daynum{font-family:'Sora';font-weight:700;font-size:12px;color:var(--muted2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .cal-cell.today .cal-daynum .dn{background:var(--orange);color:#fff;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px}
 .cal-daynum .cnt{font-size:9.5px;font-weight:800;color:var(--muted)}
+.cal-layers{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.cal-lay{display:inline-flex;align-items:center;gap:5px;font-family:'Manrope';font-weight:700;font-size:11.5px;padding:5px 10px;border-radius:999px;cursor:pointer;user-select:none;border:1px solid var(--line2);background:rgba(0,0,0,.28);color:var(--muted2);transition:all .15s}
+.cal-lay .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.45}
+.cal-lay.on{color:#fff;border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.09)}
+.cal-lay.on .dot{opacity:1}
+.cal-lay.l-act.on{color:var(--orange)}
+.cal-lay.l-arch.on{color:var(--muted2);color:#9db4d6}
+.cal-lay.l-clo.on{color:var(--green)}
+.cal-mk.mk-arch{border-style:dashed!important;opacity:.72}
+.cal-mk.mk-won{box-shadow:inset 0 0 0 1px rgba(64,214,146,.5)}
+.cal-mk.mk-lost{box-shadow:inset 0 0 0 1px rgba(255,128,134,.5);opacity:.78}
+.wk-x{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:6px 8px;border-radius:8px;margin-top:5px;cursor:pointer;border:1px dashed var(--line2);background:rgba(0,0,0,.22);color:var(--muted2)}
+.wk-x .wc{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-x .wv{font-weight:800;opacity:.85}
+.wk-x.won{border-style:solid;border-color:rgba(64,214,146,.42);color:var(--green);background:rgba(64,214,146,.09)}
+.wk-x.lost{border-style:solid;border-color:rgba(255,128,134,.38);color:var(--red);background:rgba(255,128,134,.08)}
+.wk-x.arch{color:#9db4d6}
+.wk-xsep{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:9px 0 1px;opacity:.75}
+.cal-di.di-arch{opacity:.85;border-left-style:dashed}
 .cal-marks{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;overflow:hidden}
 .cal-mk{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:15px;line-height:1;flex-shrink:0;border:1px solid rgba(255,255,255,.16)}
 .cal-more{font-size:12px;font-weight:800;color:var(--muted2);align-self:center;padding:0 3px}
@@ -607,6 +626,11 @@ body.view-cal.cal-week .wk-grid{display:grid}
     </div>
   </div>
   <div class="cal-body">
+    <div class="cal-layers" id="calLayers">
+      <button class="cal-lay l-act on" data-lay="active"><span class="dot"></span>Ativos</button>
+      <button class="cal-lay l-arch on" data-lay="arch"><span class="dot"></span>💤 Arquivados</button>
+      <button class="cal-lay l-clo on" data-lay="closed"><span class="dot"></span>🏆 Fechados</button>
+    </div>
     <div class="cal-dow" id="calDow"></div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="wk-grid" id="calWeekGrid"></div>
@@ -1760,6 +1784,32 @@ const DOW_PT=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function todayYmd(){return ymd(new Date());}
+/* camadas visiveis no calendario (persistidas) */
+const CAL_LAY_KEY='ricoPipeline.calLayers';
+let calLayers={active:true,arch:true,closed:true};
+try{const raw=localStorage.getItem(CAL_LAY_KEY);if(raw){const o=JSON.parse(raw);if(o&&typeof o==='object')calLayers=Object.assign(calLayers,o);}}catch(e){}
+function saveCalLayers(){try{localStorage.setItem(CAL_LAY_KEY,JSON.stringify(calLayers));}catch(e){}}
+function syncCalLayerChips(){
+  document.querySelectorAll('#calLayers .cal-lay').forEach(b=>b.classList.toggle('on',!!calLayers[b.dataset.lay]));
+}
+function toggleCalLayer(k){calLayers[k]=!calLayers[k];saveCalLayers();syncCalLayerChips();renderCal();}
+/* pipes arquivados/adiados que VOLTAM neste dia (snoozeUntil == iso) */
+function archOnDay(iso){
+  if(!calLayers.arch)return [];
+  try{return (pipes||[]).filter(p=>p&&p.snoozeUntil===iso&&isSnoozed(p));}catch(e){return [];}
+}
+/* pipes fechados (ganho/perdido) neste dia, pelo closedAt */
+function closedOnDay(iso){
+  if(!calLayers.closed)return [];
+  try{
+    return (history||[]).filter(h=>{
+      if(!h||!h.closedAt)return false;
+      const d=new Date(h.closedAt);
+      return !isNaN(d)&&ymd(d)===iso;
+    });
+  }catch(e){return [];}
+}
+function isWon(h){return h&&h.outcome==='Ganho';}
 /* pipes ativos (nao arquivados) com date == dia; ignora sem date, sem erro */
 function pipesOnDay(iso){
   try{
@@ -1838,26 +1888,31 @@ function renderWeekKanban(ws,tod){
     const d=new Date(ws);d.setDate(ws.getDate()+i);
     const iso=ymd(d);
     cols.push(isNonBusiness(iso)?'0.42fr':'1.35fr');
-    const list=pipesOnDay(iso);
+    const list=calLayers.active?pipesOnDay(iso):[];
+    const arch=archOnDay(iso), clo=closedOnDay(iso);
+    const total=list.length+arch.length+clo.length;
     const isToday=iso===tod;
     const hol=holidayName(iso);
     const nonbiz=isNonBusiness(iso);
     /* MESMOS cards da principal: showCat=true p/ identificar categoria em cada dia */
-    const cards=list.length?list.map(p=>cardHTML(p,true)).join(''):'<div class="wk-empty">Sem pipes.</div>';
+    let cards=list.map(p=>cardHTML(p,true)).join('');
+    if(clo.length)cards+='<div class="wk-xsep">Fechados</div>'+clo.map(h=>`<div class="wk-x ${isWon(h)?'won':'lost'}" data-hid="1" title="${esc((isWon(h)?'Ganho':'Perdido')+' · '+(h.client||''))}"><span>${isWon(h)?'🏆':'🗑️'}</span><span class="wc">${esc(h.client||'')}</span><span class="wv">${brl(h.value)}</span></div>`).join('');
+    if(arch.length)cards+='<div class="wk-xsep">Volta hoje</div>'+arch.map(p=>`<div class="wk-x arch" data-aid="${p.id}" title="Arquivado — volta em ${esc(fmtDate(p.snoozeUntil))}"><span>💤</span><span class="wc">${esc(p.client||'')}</span><span class="wv">${brl(p.value)}</span></div>`).join('');
+    if(!cards)cards='<div class="wk-empty">Sem pipes.</div>';
     /* dias não úteis: coluna estreita/esmaecida. Se houver pipes, mantém a contagem em destaque
        (indicador) e os cards continuam acessíveis (compactos/roláveis; hover clareia). */
     const colCls=['wk-col'];
     if(isToday)colCls.push('today');
     if(nonbiz)colCls.push('nonbiz');
     if(hol)colCls.push('holiday');
-    if(nonbiz&&list.length)colCls.push('has-pipes');   // colapsada mas com pipes => badge visível
+    if(nonbiz&&total)colCls.push('has-pipes');   // colapsada mas com pipes => badge visível
     /* cabeçalho: feriado mostra o nome; dias não úteis mostram contagem como "pill" */
     const holTag=hol?`<span class="wk-hol" title="${esc(hol)}">${esc(hol)}</span>`:'';
     html+=`<div class="${colCls.join(' ')}" data-iso="${iso}">
       <div class="wk-head" title="${nonbiz?(hol?esc(hol):'Fim de semana'):''}">
         <span class="wk-dow">${DOW_PT[i]}</span>
         <span class="wk-dnum">${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}</span>
-        <span class="wk-cnt">${list.length||''}</span>
+        <span class="wk-cnt">${total||''}</span>
       </div>
       ${holTag}
       <div class="wk-body" data-iso="${iso}">${cards}</div>
@@ -1875,6 +1930,8 @@ function renderWeekKanban(ws,tod){
   }catch(e){wg.style.gridTemplateColumns=cols.join(' ');}
   /* cards: mesmo gesto do board (hold/threshold + pointer-capture + auto-scroll),
      mas soltar em OUTRO dia remarca a data; clique abre o modal de edicao */
+  wg.querySelectorAll('.wk-x[data-hid]').forEach(el=>{el.onclick=()=>{closeCal();openHist();};});
+  wg.querySelectorAll('.wk-x[data-aid]').forEach(el=>{el.onclick=()=>{closeCal();openModal(el.dataset.aid);};});
   wg.querySelectorAll('.pcard').forEach(card=>{
     attachWeekCard(card);
     const del=card.querySelector('.pc-del');
@@ -1965,7 +2022,9 @@ function remapPipeDate(id,iso){
 function openModalFromWeek(id){weekCreateReturn=true;openModal(id);}
 
 function calCellHTML(d,iso,inMonth,tod,week){
-  const list=pipesOnDay(iso);
+  const list=calLayers.active?pipesOnDay(iso):[];
+  const arch=archOnDay(iso), clo=closedOnDay(iso);
+  const total=list.length+arch.length+clo.length;
   const isToday=iso===tod;
   const hol=holidayName(iso);
   const nonbiz=isNonBusiness(iso);
@@ -1976,7 +2035,7 @@ function calCellHTML(d,iso,inMonth,tod,week){
   if(hol)cls.push('holiday');
   /* rótulo discreto do feriado (ex.: "Natal") */
   const holLbl=hol?`<span class="cal-hol" title="${esc(hol)}">${esc(hol)}</span>`:'';
-  const daynum=`<div class="cal-daynum"><span class="dn">${d.getDate()}</span>${list.length?`<span class="cnt">${list.length}</span>`:''}</div>`;
+  const daynum=`<div class="cal-daynum"><span class="dn">${d.getDate()}</span>${total?`<span class="cnt">${total}</span>`:''}</div>`;
   let content;
   if(week){
     /* vista semana: lista os pipes do dia */
@@ -1985,10 +2044,14 @@ function calCellHTML(d,iso,inMonth,tod,week){
       : '';
   }else{
     /* vista mes: marcadores por categoria + "+N" se estourar */
-    const MAX=3;
-    const shown=list.slice(0,MAX);
-    const extra=list.length-shown.length;
-    content=`<div class="cal-marks">${shown.map(p=>`<span class="cal-mk" style="background:${pipeColor(p)}22;border-color:${pipeColor(p)}66" title="${esc(p.client)}">${pipeIcon(p)}</span>`).join('')}${extra>0?`<span class="cal-more">+${extra}</span>`:''}</div>`;
+    const MAX=4;
+    const marks=[]
+      .concat(list.map(p=>({k:'',c:pipeColor(p),i:pipeIcon(p),t:p.client})))
+      .concat(clo.map(h=>({k:isWon(h)?' mk-won':' mk-lost',c:isWon(h)?'#40d692':'#ff8086',i:isWon(h)?'🏆':'🗑️',t:(isWon(h)?'Ganho: ':'Perdido: ')+(h.client||'')})))
+      .concat(arch.map(p=>({k:' mk-arch',c:'#9db4d6',i:'💤',t:'Volta: '+(p.client||'')})));
+    const shown=marks.slice(0,MAX);
+    const extra=marks.length-shown.length;
+    content=`<div class="cal-marks">${shown.map(m=>`<span class="cal-mk${m.k}" style="background:${m.c}22;border-color:${m.c}66" title="${esc(m.t)}">${m.i}</span>`).join('')}${extra>0?`<span class="cal-more">+${extra}</span>`:''}</div>`;
   }
   return `<div class="${cls.join(' ')}" data-iso="${iso}">${daynum}${holLbl}${content}</div>`;
 }
@@ -1996,11 +2059,35 @@ function calCellHTML(d,iso,inMonth,tod,week){
 let calDayIso=null;
 function openCalDay(iso){
   calDayIso=iso;
-  const list=pipesOnDay(iso);
+  const list=calLayers.active?pipesOnDay(iso):[];
+  const arch=archOnDay(iso), clo=closedOnDay(iso);
   const t=document.getElementById('calDayTitle');
   try{t.textContent=new Date(iso+'T00:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});}catch(e){t.textContent=iso;}
   const el=document.getElementById('calDayList');
-  if(!list.length){el.innerHTML='<div class="cal-day-empty">Nenhum pipe previsto para este dia.</div>';}
+  const extraHTML=
+    clo.map(h=>{
+      const col=isWon(h)?'#40d692':'#ff8086';
+      return `<div class="cal-di di-arch" data-hist="1" style="border-left-color:${col};cursor:pointer">
+        <div class="cal-di-ic" style="background:${col}22">${isWon(h)?'🏆':'🗑️'}</div>
+        <div class="cal-di-main">
+          <div class="cal-di-client">${esc(h.client||'')}</div>
+          <div class="cal-di-meta">${isWon(h)?'Ganho':'Perdido'} · fechado em ${fmtDateTime(h.closedAt)}</div>
+        </div>
+        <div class="cal-di-val">${brlFull(h.value)}</div>
+      </div>`;
+    }).join('')
+    + arch.map(p=>{
+      const cat=catById(p.cat);
+      return `<div class="cal-di di-arch" data-id="${p.id}" style="border-left-color:#9db4d6">
+        <div class="cal-di-ic" style="background:#9db4d622">💤</div>
+        <div class="cal-di-main">
+          <div class="cal-di-client">${esc(p.client||'')}</div>
+          <div class="cal-di-meta">${cat.name} · arquivado, volta hoje</div>
+        </div>
+        <div class="cal-di-val">${brlFull(p.value)}</div>
+      </div>`;
+    }).join('');
+  if(!list.length&&!extraHTML){el.innerHTML='<div class="cal-day-empty">Nenhum pipe previsto para este dia.</div>';}
   else{
     el.innerHTML=list.map(p=>{
       const cat=catById(p.cat);
@@ -2014,10 +2101,13 @@ function openCalDay(iso){
         </div>
         <div class="cal-di-val">${brlFull(p.value)}</div>
       </div>`;
-    }).join('');
+    }).join('')+extraHTML;
     el.querySelectorAll('.cal-di[data-id]').forEach(it=>{
       it.style.cursor='pointer';
       it.onclick=()=>{closeCalDay();closeCal();openModal(it.dataset.id);};
+    });
+    el.querySelectorAll('.cal-di[data-hist]').forEach(it=>{
+      it.onclick=()=>{closeCalDay();closeCal();openHist();};
     });
   }
   document.getElementById('calDayOverlay').classList.add('open');
@@ -2068,6 +2158,8 @@ function wire(){
   document.getElementById('btnImport').onclick=()=>document.getElementById('importFile').click();
   document.getElementById('importFile').onchange=e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value='';};
   document.getElementById('btnHist').onclick=openHist;
+  document.querySelectorAll('#calLayers .cal-lay').forEach(b=>{b.onclick=()=>toggleCalLayer(b.dataset.lay);});
+  syncCalLayerChips();
   document.getElementById('btnDash').onclick=openDash;
   document.getElementById('dashBack').onclick=closeDash;
   document.getElementById('btnCal').onclick=openCal;
