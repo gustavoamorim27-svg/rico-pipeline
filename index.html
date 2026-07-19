@@ -232,7 +232,7 @@ header{
 .hist-search-clr{position:absolute;right:29px;top:50%;transform:translateY(-45%);background:none;border:none;color:var(--muted2);font-size:15px;cursor:pointer;line-height:1;padding:2px 4px}
 .hist-count{padding:8px 20px 0;font-size:11px;font-weight:700;color:var(--muted)}
 /* aviso de pipes atrasados */
-.latewarn{position:fixed;left:14px;bottom:calc(16px + var(--safe-b));z-index:105;display:none;align-items:center;gap:9px;background:rgba(255,128,134,.14);border:1px solid rgba(255,128,134,.5);color:var(--red);font-family:'Manrope';font-weight:800;font-size:12.5px;padding:10px 14px;border-radius:11px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px);max-width:calc(100vw - 28px)}
+.latewarn{position:fixed;left:14px;bottom:calc(62px + var(--safe-b));z-index:105;display:none;align-items:center;gap:9px;background:rgba(255,128,134,.14);border:1px solid rgba(255,128,134,.5);color:var(--red);font-family:'Manrope';font-weight:800;font-size:12.5px;padding:10px 14px;border-radius:11px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px);max-width:calc(100vw - 28px)}
 .latewarn.show{display:flex}
 .latewarn:hover{background:rgba(255,128,134,.22)}
 .latewarn .lw-ic{font-size:15px;line-height:1}
@@ -709,7 +709,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
     <div class="hsum" id="histSum"></div>
     <div class="hist-search-wrap">
       <span class="hist-search-ic">🔎</span>
-      <input class="hist-search" id="histSearch" type="search" autocomplete="off" placeholder="Buscar por cliente, categoria, tipo ou resultado…">
+      <input class="hist-search" id="histSearch" type="text" autocomplete="off" placeholder="Buscar por cliente, categoria, tipo ou resultado…">
       <button class="hist-search-clr" id="histSearchClr" title="Limpar" style="display:none">&times;</button>
     </div>
     <div class="hist-count" id="histCount"></div>
