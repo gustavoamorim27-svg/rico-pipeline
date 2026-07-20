@@ -110,6 +110,7 @@ header{
 .col-dots{display:flex;gap:3px;flex-shrink:0}
 .col-name{font-family:'Sora';font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .col-badge{font-family:'Sora';font-weight:700;font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.col-badge.arch-badge{display:inline-flex;align-items:center;gap:3px;margin-left:7px;color:#9db4d6;opacity:.8}
 .col-split{flex-shrink:0;display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px 2px}
 .col-split-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .col-split-tag b{font-family:'Sora';font-weight:800;color:var(--text,#fff)}
@@ -181,7 +182,7 @@ header{
 .dropzones{position:fixed;left:0;right:0;bottom:calc(18px + var(--safe-b));display:flex;gap:10px;justify-content:center;z-index:110;pointer-events:none;opacity:0;transform:translateY(24px);transition:opacity .18s,transform .18s;padding:0 12px}
 .dropzones.show{opacity:1;transform:translateY(0)}
 .dz{flex:1 1 0;min-width:92px;max-width:168px;height:84px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:800;font-family:'Sora';font-size:13px;border:2px dashed;background:rgba(10,14,40,.92);backdrop-filter:blur(6px);transition:transform .12s,background .12s;touch-action:none;text-align:center;padding:0 4px}
-.dz .dz-ic{font-size:24px;line-height:1}
+.dz .dz-ic{line-height:1;display:grid;place-items:center}
 .dz.win{border-color:var(--green);color:var(--green)}
 .dz.lost{border-color:var(--red);color:var(--red)}
 .dz.snz{border-color:var(--blue);color:var(--blue)}
@@ -222,7 +223,7 @@ header{
 .histlist{padding:6px 16px 6px;display:flex;flex-direction:column;gap:8px;max-height:54vh;overflow-y:auto}
 .hsum{display:flex;gap:10px;padding:6px 20px 10px}
 .hsum .hs{flex:1;border:1px solid var(--line2);border-radius:10px;padding:9px 12px}
-.hsum .hs .l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+.hsum .hs .l{display:flex;align-items:center;gap:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
 .hsum .hs .v{font-family:'Sora';font-weight:800;font-size:16px;margin-top:3px}
 /* busca do historico */
 .hist-search-wrap{padding:10px 20px 0;position:relative}
@@ -241,12 +242,23 @@ header{
 body.view-dash .latewarn,body.view-cal .latewarn{display:none!important}
 body.dragging .latewarn{display:none!important}
 /* icone de categoria no card */
-.pc-ic{flex-shrink:0;width:24px;height:24px;border-radius:7px;display:inline-grid;place-items:center;font-size:13px;line-height:1;border:1px solid rgba(255,255,255,.14)}
-@media(max-width:720px){.latewarn{font-size:11.5px;padding:9px 12px}.pc-ic{width:22px;height:22px;font-size:12px}}
+.ico{display:block;flex-shrink:0}
+.pc-ic{flex-shrink:0;width:26px;height:26px;border-radius:8px;display:inline-grid;place-items:center;line-height:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13)}
+/* card de pipe arquivado revelado no quadro */
+.pcard.is-arch{opacity:.62;border-style:dashed;background:rgba(255,255,255,.02)}
+.pcard.is-arch:hover{opacity:.9}
+.pcard.is-arch .pc-grip{display:none}
+.pc-archtag{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#9db4d6;background:rgba(91,141,239,.12);border:1px solid rgba(91,141,239,.3);border-radius:6px;padding:4px 7px;margin-bottom:8px}
+.pc-archtag button{margin-left:auto;background:rgba(91,141,239,.22);border:none;color:#cfe0ff;font-family:'Manrope';font-weight:800;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;padding:3px 7px;border-radius:5px;cursor:pointer}
+.pc-archtag button:hover{background:rgba(91,141,239,.36)}
+.rc.ac{display:inline-flex;align-items:center;gap:6px}
+.rc.ac.on{background:rgba(91,141,239,.2);color:#9db4d6;border-color:#5B8DEF}
+.rc.ac .n{font-weight:900;opacity:.85}
+@media(max-width:720px){.latewarn{font-size:11.5px;padding:9px 12px}.pc-ic{width:23px;height:23px}}
 .hitem{display:flex;align-items:center;gap:10px;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:var(--panel)}
-.hi-out{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
-.hi-out.Ganho{background:rgba(70,200,138,.18)}
-.hi-out.Perdido{background:rgba(255,128,134,.16)}
+.hi-out{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--muted2)}
+.hi-out.Ganho{color:var(--green)}
+.hi-out.Perdido{color:var(--red)}
 .hi-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .hi-client{font-family:'Sora';font-weight:700;font-size:13px;line-height:1.2}
 .hi-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -255,7 +267,7 @@ body.dragging .latewarn{display:none!important}
 .hi-act button.reopen:hover{color:var(--green);border-color:var(--green)}
 .hi-act button.del:hover{color:var(--red);border-color:var(--red)}
 .hist-empty{padding:30px 16px;text-align:center;color:var(--muted);font-style:italic;font-size:13px}
-.hi-out.arch{background:rgba(91,141,239,.16)}
+.hi-out.arch{color:#9db4d6}
 .snz-presets{display:flex;flex-wrap:wrap;gap:6px}
 .snz-presets button{font-family:'Manrope';font-weight:700;font-size:12px;cursor:pointer;border-radius:8px;padding:9px 12px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--muted2)}
 .snz-presets button:hover{border-color:var(--blue);color:var(--blue)}
@@ -381,6 +393,7 @@ body.view-cal #calPage{display:flex}
 .cal-daynum .cnt{font-size:9.5px;font-weight:800;color:var(--muted)}
 .cal-layers{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
 .cal-lay{display:inline-flex;align-items:center;gap:5px;font-family:'Manrope';font-weight:700;font-size:11.5px;padding:5px 10px;border-radius:999px;cursor:pointer;user-select:none;border:1px solid var(--line2);background:rgba(0,0,0,.28);color:var(--muted2);transition:all .15s}
+.cal-lay [data-ico]{display:inline-grid;place-items:center}
 .cal-lay .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.45}
 .cal-lay.on{color:#fff;border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.09)}
 .cal-lay.on .dot{opacity:1}
@@ -399,7 +412,7 @@ body.view-cal #calPage{display:flex}
 .wk-xsep{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:9px 0 1px;opacity:.75}
 .cal-di.di-arch{opacity:.85;border-left-style:dashed}
 .cal-marks{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;overflow:hidden}
-.cal-mk{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:15px;line-height:1;flex-shrink:0;border:1px solid rgba(255,255,255,.16)}
+.cal-mk{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;line-height:1;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13)}
 .cal-more{font-size:12px;font-weight:800;color:var(--muted2);align-self:center;padding:0 3px}
 .cal-grid.week .cal-marks{gap:4px}
 .cal-grid.week .cal-wlist{display:flex;flex-direction:column;gap:4px;overflow-y:auto;flex:1;min-height:0}
@@ -409,7 +422,7 @@ body.view-cal #calPage{display:flex}
 /* painel de dia */
 .cal-day-list{padding:6px 16px 6px;display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto}
 .cal-di{display:flex;align-items:center;gap:10px;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:var(--panel);border-left-width:3px}
-.cal-di-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.cal-di-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
 .cal-di-main{flex:1;min-width:0}
 .cal-di-client{font-family:'Sora';font-weight:700;font-size:13px;line-height:1.2}
 .cal-di-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -448,7 +461,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
   .cal-grid.week .cal-cell{min-height:auto}
   .cal-cell{padding:4px 4px;border-radius:7px;gap:3px}
   .cal-daynum{font-size:11px}
-  .cal-mk{width:22px;height:22px;font-size:13px;border-radius:6px}
+  .cal-mk{width:22px;height:22px;border-radius:6px}
   .cal-seg button{padding:7px 11px}
   .wk-grid{grid-template-columns:1fr;gap:8px}
   .wk-col{border-bottom:6px solid var(--bg)}
@@ -602,6 +615,9 @@ body.view-cal.cal-week .wk-grid{display:grid}
       <div class="rc dc" data-d="nw">Semana que vem</div>
       <div class="rc dc" data-d="cm">Mês atual</div>
     </div>
+    <div class="rchips">
+      <div class="rc ac" id="chipArchWeek" title="Mostrar no quadro os pipes que você arquivou nesta semana"><span id="archWeekIc"></span>Arquivados da semana<span class="n" id="archWeekN"></span></div>
+    </div>
   </div>
 </div>
 
@@ -648,8 +664,8 @@ body.view-cal.cal-week .wk-grid{display:grid}
   <div class="cal-body">
     <div class="cal-layers" id="calLayers">
       <button class="cal-lay l-act on" data-lay="active"><span class="dot"></span>Ativos</button>
-      <button class="cal-lay l-arch on" data-lay="arch"><span class="dot"></span>💤 Arquivados</button>
-      <button class="cal-lay l-clo on" data-lay="closed"><span class="dot"></span>🏆 Fechados</button>
+      <button class="cal-lay l-arch on" data-lay="arch"><span class="dot"></span><span data-ico="arch"></span>Arquivados</button>
+      <button class="cal-lay l-clo on" data-lay="closed"><span class="dot"></span><span data-ico="trophy"></span>Fechados</button>
     </div>
     <div class="cal-dow" id="calDow"></div>
     <div class="cal-grid" id="calGrid"></div>
@@ -659,7 +675,7 @@ body.view-cal.cal-week .wk-grid{display:grid}
 
 <!-- aviso de pipes atrasados -->
 <div class="latewarn" id="lateWarn" role="button" tabindex="0" title="Ver os pipes atrasados">
-  <span class="lw-ic">⚠</span><span class="lw-n" id="lateWarnN">0</span><span class="lw-tx" id="lateWarnTx">pipes atrasados</span>
+  <span class="lw-ic" id="lateWarnIc"></span><span class="lw-n" id="lateWarnN">0</span><span class="lw-tx" id="lateWarnTx">pipes atrasados</span>
 </div>
 
 <!-- modal detalhe do dia -->
@@ -673,10 +689,10 @@ body.view-cal.cal-week .wk-grid{display:grid}
 
 <!-- drop zones -->
 <div class="dropzones" id="dropzones">
-  <div class="dz tmr" data-out="tomorrow"><div class="dz-ic">🌙</div><div>Até amanhã</div></div>
-  <div class="dz win" data-out="Ganho"><div class="dz-ic">🏆</div><div>Ganhei</div></div>
-  <div class="dz snz" data-out="snooze"><div class="dz-ic">💤</div><div>Arquivar até</div></div>
-  <div class="dz lost" data-out="Perdido"><div class="dz-ic">🗑️</div><div>Perdido</div></div>
+  <div class="dz tmr" data-out="tomorrow"><div class="dz-ic" data-ico="moon"></div><div>Até amanhã</div></div>
+  <div class="dz win" data-out="Ganho"><div class="dz-ic" data-ico="trophy"></div><div>Ganhei</div></div>
+  <div class="dz snz" data-out="snooze"><div class="dz-ic" data-ico="arch"></div><div>Arquivar até</div></div>
+  <div class="dz lost" data-out="Perdido"><div class="dz-ic" data-ico="trash"></div><div>Perdido</div></div>
 </div>
 
 <!-- modal editar/novo -->
@@ -1140,14 +1156,42 @@ function sortPipes(arr){
     return da-db;                                        // prazo mais proximo no topo; sem data por ultimo
   });
 }
+/* pipes arquivados DENTRO da semana atual (segunda a domingo), pelo carimbo archivedAt */
+let revealArchWeek=false;
+function archivedThisWeek(p){
+  try{
+    if(!p||!p.archivedAt||!isSnoozed(p))return false;
+    const d=new Date(p.archivedAt);if(isNaN(d))return false;
+    const ws=weekStart(new Date());ws.setHours(0,0,0,0);
+    const we=new Date(ws);we.setDate(ws.getDate()+7);
+    return d>=ws&&d<we;
+  }catch(e){return false;}
+}
+function archWeekList(){try{return (pipes||[]).filter(archivedThisWeek);}catch(e){return [];}}
+function renderArchWeekChip(){
+  const c=document.getElementById('chipArchWeek');if(!c)return;
+  const ic=document.getElementById('archWeekIc');
+  if(ic&&!ic.firstChild)ic.innerHTML=svgIco('eye',14);
+  const n=archWeekList().length;
+  const ne=document.getElementById('archWeekN');
+  if(ne)ne.textContent=n?' · '+n:'';
+  c.classList.toggle('on',revealArchWeek&&n>0);
+  c.style.display=n?'inline-flex':'none';
+}
+function toggleArchWeek(){
+  revealArchWeek=!revealArchWeek;
+  renderArchWeekChip();renderGrid();
+  toast(revealArchWeek?'Mostrando arquivados desta semana':'Arquivados escondidos de novo');
+}
 function visForCats(cats,colId){
   const scope=COL_FLAGS[colId]||null;   // so a coluna dona dos flags e filtrada
   return sortPipes(pipes.filter(p=>{
     if(!cats.includes(p.cat))return false;
-    if(isSnoozed(p))return false;
+    const revealed=revealArchWeek&&archivedThisWeek(p);
+    if(isSnoozed(p)&&!revealed)return false;
     if(!passFlag(p,scope))return false;
     if(filterRank!=='all'&&rankOf(+p.nota)!==filterRank)return false;
-    if(filterDate!=='all'&&!dateInRange(p.date,filterDate))return false;
+    if(!revealed&&filterDate!=='all'&&!dateInRange(p.date,filterDate))return false;
     if(q){const t=(p.client+' '+p.next+' '+p.notes+' '+(p.stage||'')+' '+(p.subtype||'')).toLowerCase();if(!t.includes(q.toLowerCase()))return false;}
     return true;
   }));
@@ -1184,7 +1228,8 @@ function renderSumbar(){
 function renderGrid(){
   document.getElementById('grid').innerHTML=COLUMNS.map(col=>{
     const items=visForCats(col.cats,col.id);
-    const sum=items.reduce((a,p)=>a+(+p.value||0),0);
+    const act=items.filter(p=>!isSnoozed(p));
+    const sum=act.reduce((a,p)=>a+(+p.value||0),0);
     const cards=items.length?items.map(p=>cardHTML(p,col.mixed)).join(''):`<div class="empty-col">Sem pipes aqui.</div>`;
     const dots=col.mixed
       ? `<div class="col-dots">${col.cats.map(c=>`<span class="col-dot" style="background:${catById(c).color}"></span>`).join('')}</div>`
@@ -1196,8 +1241,8 @@ function renderGrid(){
     const scopeActive=scopeF.some(f=>activeFlags.has(f));
     const clearChip=scopeActive?`<span class="col-split-clear" data-fclear="${col.id}">✕ limpar</span>`:'';
     if(col.mixed){
-      const segSum=items.filter(p=>p.cat==='seg').reduce((a,p)=>a+(+p.value||0),0);
-      const conSum=items.filter(p=>p.cat==='con').reduce((a,p)=>a+(+p.value||0),0);
+      const segSum=act.filter(p=>p.cat==='seg').reduce((a,p)=>a+(+p.value||0),0);
+      const conSum=act.filter(p=>p.cat==='con').reduce((a,p)=>a+(+p.value||0),0);
       splitRow=`<div class="col-split">
         <span class="col-split-tag" data-fchip="seg"><span class="cs-dot" style="background:var(--seg)"></span>Seguros <b>${brlFull(segSum)}</b></span>
         <span class="col-split-tag" data-fchip="con"><span class="cs-dot" style="background:var(--con)"></span>Consórcio <b>${brlFull(conSum)}</b></span>
@@ -1205,8 +1250,8 @@ function renderGrid(){
       </div>`;
     }
     else if(col.id==='cap'){
-      const prevSum=items.filter(p=>subtypeOf(p)==='Previdência').reduce((a,p)=>a+(+p.value||0),0);
-      const tedSum =items.filter(p=>subtypeOf(p)==='TED').reduce((a,p)=>a+(+p.value||0),0);
+      const prevSum=act.filter(p=>subtypeOf(p)==='Previdência').reduce((a,p)=>a+(+p.value||0),0);
+      const tedSum =act.filter(p=>subtypeOf(p)==='TED').reduce((a,p)=>a+(+p.value||0),0);
       splitRow=`<div class="col-split">
         <span class="col-split-tag" data-fchip="prev"><span class="cs-dot" style="background:var(--cap)"></span>Previdência <b>${brlFull(prevSum)}</b></span>
         <span class="col-split-tag" data-fchip="ted"><span class="cs-dot" style="background:var(--ag)"></span>TED <b>${brlFull(tedSum)}</b></span>
@@ -1216,7 +1261,7 @@ function renderGrid(){
     return `<div class="col">
       <div class="col-head ${col.cls}">
         <div class="col-hl">${dots}<span class="col-name">${col.name}</span></div>
-        <span class="col-badge">${items.length} · ${brl(sum)}</span>
+        <span class="col-badge">${act.length} · ${brl(sum)}</span>${items.length>act.length?`<span class="col-badge arch-badge">${svgIco('arch',12)}+${items.length-act.length}</span>`:''}
       </div>
       ${splitRow}
       <div class="col-body">${cards}</div>
@@ -1228,6 +1273,8 @@ function renderGrid(){
 
   document.querySelectorAll('.pcard').forEach(card=>{
     attachCard(card);
+    const rb=card.querySelector('[data-react]');
+    if(rb)rb.onclick=e=>{e.stopPropagation();reactivate(rb.dataset.react);};
     card.querySelector('.pc-del').onclick=e=>{e.stopPropagation();quickDel(card.dataset.id);};
   });
   document.querySelectorAll('.add-btn').forEach(btn=>{btn.onclick=()=>openModal(null,btn.dataset.cat);});
@@ -1253,11 +1300,14 @@ function cardHTML(p,showCat){
   const catrow=showCat?`<div class="pc-catrow"><span class="cat-dot" style="background:${cat.color}"></span>${cat.name}</div>`:'';
   const subchip=(p.cat==='cap'&&p.subtype)?`<div class="pc-sub">${esc(p.subtype)}</div>`:'';
   const allocrow=(p.cat==='ag'&&Array.isArray(p.alloc)&&p.alloc.length)?`<div class="pc-alloc">${p.alloc.map(a=>`<span>${esc(a)}</span>`).join('')}</div>`:'';
-  return `<div class="pcard" data-id="${p.id}" style="border-left-color:${cat.color}">
+  const isArch=isSnoozed(p);
+  const archtag=isArch?`<div class="pc-archtag">${svgIco('arch',13)}Arquivado · volta ${esc(fmtDate(p.snoozeUntil))}<button data-react="${p.id}">Reativar</button></div>`:'';
+  return `<div class="pcard${isArch?' is-arch':''}" data-id="${p.id}" style="border-left-color:${cat.color}">
     <div class="pc-grip" aria-label="Arrastar" title="Arraste para mover"><svg viewBox="0 0 6 16" fill="currentColor"><circle cx="1.5" cy="2" r="1.3"/><circle cx="4.5" cy="2" r="1.3"/><circle cx="1.5" cy="8" r="1.3"/><circle cx="4.5" cy="8" r="1.3"/><circle cx="1.5" cy="14" r="1.3"/><circle cx="4.5" cy="14" r="1.3"/></svg></div>
     <button class="pc-del" title="Excluir" aria-label="Excluir">✕</button>
     ${catrow}
-    <div class="pc-top"><span class="pc-ic" style="background:${pipeColor(p)}22;border-color:${pipeColor(p)}55" title="${esc(cat.name)}">${pipeIcon(p)}</span><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
+    ${archtag}
+    <div class="pc-top"><span class="pc-ic" style="color:${pipeColor(p)}" title="${esc(cat.name)}">${pipeIcon(p,15)}</span><div class="pc-client">${esc(p.client)}</div><span class="pc-rank ${rank}">${rank}</span></div>
     <div class="pc-val">${brlFull(p.value)}</div>
     ${subchip}
     ${allocrow}
@@ -1280,6 +1330,8 @@ function latePipes(){
 function renderLateWarn(){
   const el=document.getElementById('lateWarn');
   if(!el)return;
+  const ic=document.getElementById('lateWarnIc');
+  if(ic&&!ic.firstChild)ic.innerHTML=svgIco('alert',15);
   const n=latePipes().length;
   el.classList.toggle('show',n>0);
   const ne=document.getElementById('lateWarnN'), tx=document.getElementById('lateWarnTx');
@@ -1296,7 +1348,7 @@ function goToLate(){
     toast('Mostrando os pipes atrasados ⚠');
   }catch(e){}
 }
-function render(){renderHeaderTotal();renderSumbar();renderGrid();renderLateWarn();}
+function render(){renderHeaderTotal();renderSumbar();renderGrid();renderLateWarn();renderArchWeekChip();}
 
 /* ════════ DRAG (touch + mouse) ════════ */
 let drag=null;
@@ -1462,10 +1514,10 @@ function isSnoozed(p){if(!p.snoozeUntil)return false;const d=new Date(p.snoozeUn
 let snoozeId=null;
 function openSnooze(id){snoozeId=id;const d=new Date();d.setDate(d.getDate()+7);document.getElementById('snzDate').value=d.toISOString().slice(0,10);document.getElementById('snoozeOverlay').classList.add('open');}
 function closeSnooze(){document.getElementById('snoozeOverlay').classList.remove('open');}
-function snoozeSave(){const date=document.getElementById('snzDate').value;if(!date){document.getElementById('snzDate').focus();return;}const p=pipes.find(x=>x.id===snoozeId);if(p){p.snoozeUntil=date;persist();render();toast('Arquivado até '+fmtDate(date));}closeSnooze();}
-function reactivate(id){const p=pipes.find(x=>x.id===id);if(!p)return;delete p.snoozeUntil;persist();renderHist();render();toast('Pipe reativado no quadro');}
+function snoozeSave(){const date=document.getElementById('snzDate').value;if(!date){document.getElementById('snzDate').focus();return;}const p=pipes.find(x=>x.id===snoozeId);if(p){p.snoozeUntil=date;p.archivedAt=new Date().toISOString();persist();render();toast('Arquivado até '+fmtDate(date));}closeSnooze();}
+function reactivate(id){const p=pipes.find(x=>x.id===id);if(!p)return;delete p.snoozeUntil;delete p.archivedAt;persist();renderHist();render();toast('Pipe reativado no quadro');}
 /* atalho: joga o pipe pro lado, escondendo ate amanha (reaparece sozinho) */
-function snoozeTomorrow(id){const p=pipes.find(x=>x.id===id);if(!p)return;const d=new Date();d.setDate(d.getDate()+1);p.snoozeUntil=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;persist();render();try{if(typeof renderCal==='function'&&document.body.classList.contains('view-cal'))renderCal();}catch(e){}toast('Escondido até amanhã 🌙');}
+function snoozeTomorrow(id){const p=pipes.find(x=>x.id===id);if(!p)return;const d=new Date();d.setDate(d.getDate()+1);p.snoozeUntil=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;p.archivedAt=new Date().toISOString();persist();render();try{if(typeof renderCal==='function'&&document.body.classList.contains('view-cal'))renderCal();}catch(e){}toast('Escondido até amanhã 🌙');}
 
 /* ── nota picker ── */
 function buildNP(val){
@@ -1574,9 +1626,9 @@ function renderHist(){
   const arch=pipes.filter(isSnoozed).slice().sort((a,b)=>Date.parse(a.snoozeUntil)-Date.parse(b.snoozeUntil));
   const ws=won.reduce((a,p)=>a+(+p.value||0),0),ls=lost.reduce((a,p)=>a+(+p.value||0),0);
   document.getElementById('histSum').innerHTML=
-    `<div class="hs"><div class="l">🏆 Ganhos</div><div class="v" style="color:var(--green)">${brl(ws)}</div><div class="l" style="margin-top:2px">${won.length} pipe(s)</div></div>
-     <div class="hs"><div class="l">🗑️ Perdidos</div><div class="v" style="color:var(--red)">${brl(ls)}</div><div class="l" style="margin-top:2px">${lost.length} pipe(s)</div></div>
-     <div class="hs"><div class="l">💤 Arquivados</div><div class="v" style="color:var(--blue)">${arch.length}</div><div class="l" style="margin-top:2px">aguardando</div></div>`;
+    `<div class="hs"><div class="l">${svgIco('trophy',12)}Ganhos</div><div class="v" style="color:var(--green)">${brl(ws)}</div><div class="l" style="margin-top:2px">${won.length} pipe(s)</div></div>
+     <div class="hs"><div class="l">${svgIco('trash',12)}Perdidos</div><div class="v" style="color:var(--red)">${brl(ls)}</div><div class="l" style="margin-top:2px">${lost.length} pipe(s)</div></div>
+     <div class="hs"><div class="l">${svgIco('arch',12)}Arquivados</div><div class="v" style="color:var(--blue)">${arch.length}</div><div class="l" style="margin-top:2px">aguardando</div></div>`;
   const list=document.getElementById('histList');
   const cnt=document.getElementById('histCount');
   const clr=document.getElementById('histSearchClr');
@@ -1590,7 +1642,7 @@ function renderHist(){
     const cat=catById(p.cat);
     return `<div class="hitem" data-aid="${p.id}">
       <div class="hi-main">
-        <div class="hi-out arch">💤</div>
+        <div class="hi-out arch">${svgIco('arch',16)}</div>
         <div><div class="hi-client">${esc(p.client)}</div>
         <div class="hi-meta">${cat.name} · ${brlFull(p.value)} · volta em ${fmtDate(p.snoozeUntil)}</div></div>
       </div>
@@ -1601,7 +1653,7 @@ function renderHist(){
     const cat=catById(h.cat);
     return `<div class="hitem" data-id="${h.id}">
       <div class="hi-main">
-        <div class="hi-out ${h.outcome}">${h.outcome==='Ganho'?'🏆':'🗑️'}</div>
+        <div class="hi-out ${h.outcome}">${svgIco(h.outcome==='Ganho'?'won':'lost',16)}</div>
         <div><div class="hi-client">${esc(h.client)}</div>
         <div class="hi-meta">${cat.name}${h.cat==='cap'&&h.subtype?' · '+esc(h.subtype):''} · ${brlFull(h.value)} · ${fmtDateTime(h.closedAt)}</div></div>
       </div>
@@ -1844,25 +1896,53 @@ function wireDashEdit(){
 }
 
 /* ════════ CALENDÁRIO ════════ */
-/* icone + cor por pipe (usa CATS; captacao distingue Previdencia/TED por subtype) */
-function pipeIcon(p){
-  if(!p)return'•';
-  if(p.cat==='seg')return'🛡️';
-  if(p.cat==='con')return'🏠';
-  if(p.cat==='rv') return'📈';
-  if(p.cat==='ag') return'🏦';
+/* ── set de icones (linha, monocromatico, fundo neutro) ── */
+const ICO={
+  rv:'<path d="M3.5 17.2l5.2-5.2 3.1 3.1 6.7-6.9"/><path d="M14.3 8.2h4.9v4.9"/>',
+  ag:'<path d="M3.6 9.6L12 4.6l8.4 5"/><path d="M6.2 10.6v8M10.1 10.6v8M13.9 10.6v8M17.8 10.6v8"/><path d="M3.4 19.4h17.2"/>',
+  seg:'<path d="M12 3.4v2.2"/><path d="M3.6 12.4a8.4 8.4 0 0 1 16.8 0z"/><path d="M12 12.4v5.6a2.2 2.2 0 0 0 4.4 0"/>',
+  con:'<path d="M4 10.6L12 4.6l8 6"/><path d="M6.3 9.9v9.5h11.4V9.9"/><path d="M10.1 19.4v-4.7h3.8v4.7"/>',
+  prev:'<rect x="3.3" y="7.6" width="17.4" height="11.3" rx="2"/><path d="M9 7.6V5.8c0-.6.5-1.1 1.1-1.1h3.8c.6 0 1.1.5 1.1 1.1v1.8"/><path d="M3.3 12.4h17.4"/>',
+  ted:'<path d="M4.2 8.6h12.6"/><path d="M13.9 5.7l2.9 2.9-2.9 2.9"/><path d="M19.8 15.4H7.2"/><path d="M10.1 12.5l-2.9 2.9 2.9 2.9"/>',
+  stvm:'<path d="M3.6 19.6h16.8"/><path d="M7 19.6v-5.4M11.7 19.6V8.6M16.4 19.6v-8"/>',
+  pj:'<path d="M4.2 19.8V5.3c0-.4.3-.8.8-.8h7.1c.4 0 .8.4.8.8v14.5"/><path d="M12.9 9.7h6.1c.4 0 .8.3.8.8v9.3"/><path d="M6.8 8.1h3.2M6.8 11.4h3.2M6.8 14.7h3.2M15.6 13.1h1.6M15.6 16.4h1.6"/><path d="M2.6 19.8h18.8"/>',
+  cons:'<circle cx="12" cy="12" r="8.3"/><path d="M15.6 8.4l-2.3 5.3-5.3 2.3 2.3-5.3z"/>',
+  orig:'<path d="M12 20.2v-7"/><path d="M12 13.2c0-3.7 3-6.7 6.7-6.7 0 3.7-3 6.7-6.7 6.7z"/><path d="M12 15.3c0-2.9-2.3-5.2-5.2-5.2 0 2.9 2.3 5.2 5.2 5.2z"/>',
+  cap:'<circle cx="12" cy="12" r="8.3"/><path d="M12 6.9v10.2"/><path d="M14.6 9.7c-.5-.8-1.5-1.3-2.6-1.3-1.6 0-2.6.8-2.6 1.9 0 2.7 5.3 1.5 5.3 4.1 0 1.2-1.1 2.1-2.7 2.1-1.3 0-2.3-.5-2.9-1.4"/>',
+  won:'<circle cx="12" cy="12" r="8.3"/><path d="M8.3 12.3l2.6 2.6 4.8-5.5"/>',
+  lost:'<circle cx="12" cy="12" r="8.3"/><path d="M9.4 9.4l5.2 5.2M14.6 9.4l-5.2 5.2"/>',
+  arch:'<rect x="3.4" y="4.9" width="17.2" height="4.3" rx="1.2"/><path d="M5.4 9.2v9.3c0 .7.5 1.2 1.2 1.2h10.8c.7 0 1.2-.5 1.2-1.2V9.2"/><path d="M10.1 13h3.8"/>',
+  eye:'<path d="M2.6 12S6.4 5.7 12 5.7 21.4 12 21.4 12 17.6 18.3 12 18.3 2.6 12 2.6 12z"/><circle cx="12" cy="12" r="2.7"/>',
+  alert:'<path d="M12 4.6L2.9 19.4h18.2z"/><path d="M12 10v4.2"/><path d="M12 16.9v.1"/>',
+  moon:'<path d="M20.4 14.3A8.6 8.6 0 0 1 9.7 3.6a8.6 8.6 0 1 0 10.7 10.7z"/>',
+  trash:'<path d="M4 6.6h16"/><path d="M9.4 6.6V4.9c0-.6.5-1 1-1h3.2c.5 0 1 .4 1 1v1.7"/><path d="M6.4 6.6l.9 12.2c0 .8.7 1.4 1.5 1.4h6.4c.8 0 1.5-.6 1.5-1.4l.9-12.2"/><path d="M10.4 10.2v6.4M13.6 10.2v6.4"/>',
+  trophy:'<path d="M7.6 4.2h8.8v4.6a4.4 4.4 0 0 1-8.8 0z"/><path d="M7.6 5.9H5.1v1.5a3 3 0 0 0 3 3"/><path d="M16.4 5.9h2.5v1.5a3 3 0 0 1-3 3"/><path d="M12 13.2v3.4"/><path d="M8.6 20.1h6.8l-.9-3.5H9.5z"/>',
+  dot:'<circle cx="12" cy="12" r="3"/>'
+};
+function svgIco(k,sz){
+  const d=ICO[k]||ICO.dot, s=sz||16;
+  return `<svg class="ico" viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
+/* icone + cor por pipe (usa CATS; captacao distingue subtypes) */
+function pipeIcoKey(p){
+  if(!p)return'dot';
+  if(p.cat==='seg')return'seg';
+  if(p.cat==='con')return'con';
+  if(p.cat==='rv') return'rv';
+  if(p.cat==='ag') return'ag';
   if(p.cat==='cap'){
     const s=subtypeOf(p);
-    if(s==='Previdência')return'💼';
-    if(s==='TED')return'💸';
-    if(s==='STVM')return'📊';
-    if(s==='PJ')return'🏢';
-    if(s==='Consultoria')return'🧭';
-    if(s==='Originação')return'🌱';
-    return'💰';
+    if(s==='Previdência')return'prev';
+    if(s==='TED')return'ted';
+    if(s==='STVM')return'stvm';
+    if(s==='PJ')return'pj';
+    if(s==='Consultoria')return'cons';
+    if(s==='Originação')return'orig';
+    return'cap';
   }
-  return'•';
+  return'dot';
 }
+function pipeIcon(p,sz){return svgIco(pipeIcoKey(p),sz);}
 function pipeColor(p){
   if(p&&p.cat==='cap'){
     const s=subtypeOf(p);
@@ -1991,8 +2071,8 @@ function renderWeekKanban(ws,tod){
     const nonbiz=isNonBusiness(iso);
     /* MESMOS cards da principal: showCat=true p/ identificar categoria em cada dia */
     let cards=list.map(p=>cardHTML(p,true)).join('');
-    if(clo.length)cards+='<div class="wk-xsep">Fechados</div>'+clo.map(h=>`<div class="wk-x ${isWon(h)?'won':'lost'}" data-hid="1" title="${esc((isWon(h)?'Ganho':'Perdido')+' · '+(h.client||''))}"><span>${isWon(h)?'🏆':'🗑️'}</span><span class="wc">${esc(h.client||'')}</span><span class="wv">${brl(h.value)}</span></div>`).join('');
-    if(arch.length)cards+='<div class="wk-xsep">Volta hoje</div>'+arch.map(p=>`<div class="wk-x arch" data-aid="${p.id}" title="Arquivado — volta em ${esc(fmtDate(p.snoozeUntil))}"><span>💤</span><span class="wc">${esc(p.client||'')}</span><span class="wv">${brl(p.value)}</span></div>`).join('');
+    if(clo.length)cards+='<div class="wk-xsep">Fechados</div>'+clo.map(h=>`<div class="wk-x ${isWon(h)?'won':'lost'}" data-hid="1" title="${esc((isWon(h)?'Ganho':'Perdido')+' · '+(h.client||''))}">${svgIco(isWon(h)?'won':'lost',13)}<span class="wc">${esc(h.client||'')}</span><span class="wv">${brl(h.value)}</span></div>`).join('');
+    if(arch.length)cards+='<div class="wk-xsep">Volta hoje</div>'+arch.map(p=>`<div class="wk-x arch" data-aid="${p.id}" title="Arquivado — volta em ${esc(fmtDate(p.snoozeUntil))}">${svgIco('arch',13)}<span class="wc">${esc(p.client||'')}</span><span class="wv">${brl(p.value)}</span></div>`).join('');
     if(!cards)cards='<div class="wk-empty">Sem pipes.</div>';
     /* dias não úteis: coluna estreita/esmaecida. Se houver pipes, mantém a contagem em destaque
        (indicador) e os cards continuam acessíveis (compactos/roláveis; hover clareia). */
@@ -2141,12 +2221,12 @@ function calCellHTML(d,iso,inMonth,tod,week){
     /* vista mes: marcadores por categoria + "+N" se estourar */
     const MAX=4;
     const marks=[]
-      .concat(list.map(p=>({k:'',c:pipeColor(p),i:pipeIcon(p),t:p.client})))
-      .concat(clo.map(h=>({k:isWon(h)?' mk-won':' mk-lost',c:isWon(h)?'#40d692':'#ff8086',i:isWon(h)?'🏆':'🗑️',t:(isWon(h)?'Ganho: ':'Perdido: ')+(h.client||'')})))
-      .concat(arch.map(p=>({k:' mk-arch',c:'#9db4d6',i:'💤',t:'Volta: '+(p.client||'')})));
+      .concat(list.map(p=>({k:'',c:pipeColor(p),i:pipeIcon(p,15),t:p.client})))
+      .concat(clo.map(h=>({k:isWon(h)?' mk-won':' mk-lost',c:isWon(h)?'#40d692':'#ff8086',i:svgIco(isWon(h)?'won':'lost',15),t:(isWon(h)?'Ganho: ':'Perdido: ')+(h.client||'')})))
+      .concat(arch.map(p=>({k:' mk-arch',c:'#9db4d6',i:svgIco('arch',15),t:'Volta: '+(p.client||'')})));
     const shown=marks.slice(0,MAX);
     const extra=marks.length-shown.length;
-    content=`<div class="cal-marks">${shown.map(m=>`<span class="cal-mk${m.k}" style="background:${m.c}22;border-color:${m.c}66" title="${esc(m.t)}">${m.i}</span>`).join('')}${extra>0?`<span class="cal-more">+${extra}</span>`:''}</div>`;
+    content=`<div class="cal-marks">${shown.map(m=>`<span class="cal-mk${m.k}" style="color:${m.c}" title="${esc(m.t)}">${m.i}</span>`).join('')}${extra>0?`<span class="cal-more">+${extra}</span>`:''}</div>`;
   }
   return `<div class="${cls.join(' ')}" data-iso="${iso}">${daynum}${holLbl}${content}</div>`;
 }
@@ -2163,7 +2243,7 @@ function openCalDay(iso){
     clo.map(h=>{
       const col=isWon(h)?'#40d692':'#ff8086';
       return `<div class="cal-di di-arch" data-hist="1" style="border-left-color:${col};cursor:pointer">
-        <div class="cal-di-ic" style="background:${col}22">${isWon(h)?'🏆':'🗑️'}</div>
+        <div class="cal-di-ic" style="color:${col}">${svgIco(isWon(h)?'won':'lost',16)}</div>
         <div class="cal-di-main">
           <div class="cal-di-client">${esc(h.client||'')}</div>
           <div class="cal-di-meta">${isWon(h)?'Ganho':'Perdido'} · fechado em ${fmtDateTime(h.closedAt)}</div>
@@ -2174,7 +2254,7 @@ function openCalDay(iso){
     + arch.map(p=>{
       const cat=catById(p.cat);
       return `<div class="cal-di di-arch" data-id="${p.id}" style="border-left-color:#9db4d6">
-        <div class="cal-di-ic" style="background:#9db4d622">💤</div>
+        <div class="cal-di-ic" style="color:#9db4d6">${svgIco('arch',16)}</div>
         <div class="cal-di-main">
           <div class="cal-di-client">${esc(p.client||'')}</div>
           <div class="cal-di-meta">${cat.name} · arquivado, volta hoje</div>
@@ -2189,7 +2269,7 @@ function openCalDay(iso){
       const col=pipeColor(p);
       const sub=(p.cat==='cap'&&p.subtype)?' · '+esc(p.subtype):'';
       return `<div class="cal-di" data-id="${p.id}" style="border-left-color:${col}">
-        <div class="cal-di-ic" style="background:${col}22">${pipeIcon(p)}</div>
+        <div class="cal-di-ic" style="color:${col}">${pipeIcon(p,16)}</div>
         <div class="cal-di-main">
           <div class="cal-di-client">${esc(p.client)}</div>
           <div class="cal-di-meta">${cat.name}${sub} · ${esc(p.stage||'')}</div>
@@ -2221,7 +2301,7 @@ function doExport(){
   a.download='rico-pipeline-'+new Date().toISOString().slice(0,10)+'.json';a.click();
   toast('Backup baixado ✓');
 }
-function normPipe(p){return{id:p.id||uid(),client:p.client||'',cat:p.cat||'rv',stage:p.stage||'Primeiro contato',subtype:p.subtype||'',nota:+p.nota||0,value:+p.value||0,date:p.date||'',next:p.next||'',notes:p.notes||'',alloc:Array.isArray(p.alloc)?p.alloc:[],snoozeUntil:p.snoozeUntil,outcome:p.outcome,closedAt:p.closedAt};}
+function normPipe(p){return{id:p.id||uid(),client:p.client||'',cat:p.cat||'rv',stage:p.stage||'Primeiro contato',subtype:p.subtype||'',nota:+p.nota||0,value:+p.value||0,date:p.date||'',next:p.next||'',notes:p.notes||'',alloc:Array.isArray(p.alloc)?p.alloc:[],snoozeUntil:p.snoozeUntil,archivedAt:p.archivedAt,outcome:p.outcome,closedAt:p.closedAt};}
 function doImport(file){
   const rd=new FileReader();
   rd.onload=()=>{
@@ -2281,6 +2361,9 @@ function wire(){
   document.querySelectorAll('.rc[data-r]').forEach(chip=>{
     chip.onclick=()=>{filterRank=chip.dataset.r;document.querySelectorAll('.rc[data-r]').forEach(c=>{c.className='rc'+(c.dataset.r===filterRank?' on-'+(filterRank==='all'?'all':filterRank.toLowerCase()):'');});renderGrid();};
   });
+  document.querySelectorAll('[data-ico]').forEach(el=>{if(!el.firstChild)el.innerHTML=svgIco(el.dataset.ico,el.closest('.dz')?22:13);});
+  const caw=document.getElementById('chipArchWeek');
+  if(caw)caw.onclick=toggleArchWeek;
   const lw=document.getElementById('lateWarn');
   if(lw){lw.onclick=goToLate;lw.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();goToLate();}};}
   document.querySelectorAll('.rc[data-d]').forEach(chip=>{
