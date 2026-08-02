@@ -163,6 +163,32 @@ header{
 .sc-pace{font-size:12px;font-weight:700;color:var(--muted2);margin:3px 0 7px}
 .sc-pace b{color:var(--orange)}
 .sc-mult{font-size:11px;font-weight:700;color:var(--cap);background:rgba(70,200,138,.1);border:1px solid rgba(70,200,138,.28);border-radius:7px;padding:5px 8px;margin:2px 0 8px}
+/* atalhos de data no modal */
+.date-presets{display:flex;gap:5px;flex-wrap:wrap;margin-top:-4px}
+.date-presets button{font-family:'Manrope';font-weight:700;font-size:11px;background:rgba(255,255,255,.06);border:1px solid var(--line2);color:var(--muted2);padding:6px 10px;border-radius:999px;cursor:pointer;transition:all .13s}
+.date-presets button:hover{background:rgba(255,255,255,.12);color:var(--text)}
+.date-presets button.hit{background:var(--orange);color:#fff;border-color:transparent}
+/* cartao MEREO na pagina de metas */
+.mereo-card{max-width:1180px;margin:0 auto 16px;display:flex;gap:20px;align-items:stretch;background:var(--panel);border:1px solid var(--line2);border-left:3px solid var(--orange);border-radius:14px;padding:16px 20px;flex-wrap:wrap}
+.mer-left{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:112px}
+.mer-score{font-family:'Sora';font-weight:800;font-size:44px;line-height:1}
+.mer-cap{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:7px;text-align:center}
+.mer-mid{flex:1;min-width:270px;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.mer-row{display:flex;align-items:center;gap:9px;font-size:12px}
+.mer-lv{width:23px;height:23px;border-radius:6px;display:grid;place-items:center;font-weight:900;font-size:12px;border:1px solid;flex-shrink:0}
+.mer-name{font-weight:800;flex:0 0 158px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mer-w{font-weight:700;color:var(--muted);font-size:10px;margin-left:5px}
+.mer-det{flex:1;color:var(--muted2);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mer-pct{font-family:'Sora';font-weight:800;flex-shrink:0}
+.mer-right{min-width:210px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.mer-sem-t{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mer-sem{display:flex;gap:4px}
+.mer-sm{flex:1;border:1px solid var(--line2);border-radius:7px;padding:4px 2px;text-align:center;min-width:0}
+.mer-sm.cur{border-color:var(--orange)}
+.mer-sm .l{display:block;font-size:9px;font-weight:800;color:var(--muted)}
+.mer-sm .v{display:block;font-family:'Sora';font-weight:800;font-size:12px;margin-top:1px}
+.mer-sem-avg{font-size:11px;color:var(--muted2);font-weight:700}
+@media(max-width:720px){.mereo-card{padding:13px 14px;gap:14px}.mer-name{flex-basis:112px}.mer-score{font-size:36px}}
 .dash-mnote{font-size:11px;color:var(--muted);margin:-4px 0 10px}
 .pc-nota{display:flex;align-items:center;gap:6px;margin-bottom:7px}
 .pc-nota-num{font-family:'Sora';font-weight:700;font-size:12px;width:14px;flex-shrink:0;text-align:right}
@@ -702,15 +728,19 @@ body.view-cal.cal-week .wk-grid{display:grid}
   <div class="modal">
     <div class="mhead"><h2 id="mTitle">Novo pipe</h2><button class="xbtn" id="btnClose">&times;</button></div>
     <div class="mbody">
-      <div class="field full"><label>Cliente</label><input id="f-client" placeholder="Nome do cliente"></div>
+      <div class="field full"><label>Cliente</label><input id="f-client" list="clientList" autocomplete="off" placeholder="Nome do cliente"><datalist id="clientList"></datalist></div>
       <div class="field"><label>Categoria</label><select id="f-cat"></select></div>
       <div class="field" id="subtypeField" style="display:none"><label>Tipo de captação</label><select id="f-subtype"></select></div>
       <div class="field full" id="allocField" style="display:none"><label>O que vou alocar</label><div class="allocbox" id="allocBox"></div></div>
-      <div class="field"><label>Estágio</label><select id="f-stage"></select></div>
       <div class="field full"><label>Nota de temperatura (0 = frio · 10 = fechando)</label><div class="np" id="notaPicker"></div></div>
       <div class="field"><label>Valor potencial (R$)</label><select id="f-value"></select></div>
       <div class="field"><label>Data prevista</label><input id="f-date" type="date"></div>
-      <div class="field full"><label>Próxima ação</label><select id="f-next"></select></div>
+      <div class="field full"><div class="date-presets" id="datePresets">
+        <button type="button" data-dp="tomorrow">🌅 Amanhã</button>
+        <button type="button" data-dp="friday">Sexta</button>
+        <button type="button" data-dp="monday">Seg. que vem</button>
+        <button type="button" data-dp="eom">Fim do mês</button>
+      </div></div>
       <div class="field full"><label>Notas</label><textarea id="f-notes" placeholder="Perfil, contexto, objeções…"></textarea></div>
     </div>
     <div class="mfoot">
@@ -1314,7 +1344,7 @@ function cardHTML(p,showCat){
     ${subchip}
     ${allocrow}
     <div class="pc-nota"><span class="pc-nota-num" style="color:${RCO[rank]}">${nota}</span><div class="pc-dots">${dots}</div></div>
-    ${p.next?`<div class="pc-next" title="${esc(p.next)}">→ ${esc(p.next)}</div>`:'<div class="pc-next" style="color:var(--muted);font-style:italic">Sem próxima ação</div>'}
+    ${p.next?`<div class="pc-next" title="${esc(p.next)}">→ ${esc(p.next)}</div>`:''}
     <div class="pc-foot"><span class="pc-stage">${esc(p.stage)}</span><span class="pc-date ${od?'od':''}">${fmtDate(p.date)}${od?' ⚠':''}</span></div>
   </div>`;
 }
@@ -1536,8 +1566,17 @@ function buildNP(val){
 /* ── modal ── */
 function fillSelects(){
   document.getElementById('f-cat').innerHTML=CATS.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  document.getElementById('f-stage').innerHTML=STAGES.map(s=>`<option>${s}</option>`).join('');
   document.getElementById('f-subtype').innerHTML=SUBTYPES.map(s=>`<option>${s}</option>`).join('');
+}
+/* autocomplete de clientes: nomes ja usados em pipes + historico */
+function fillClientList(){
+  const dl=document.getElementById('clientList');
+  if(!dl)return;
+  try{
+    const names=[...new Set([].concat(pipes||[],history||[]).map(x=>x&&String(x.client||'').trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');
+  }catch(e){}
 }
 function toggleSubtype(){document.getElementById('subtypeField').style.display=document.getElementById('f-cat').value==='cap'?'flex':'none';}
 function toggleAlloc(){document.getElementById('allocField').style.display=document.getElementById('f-cat').value==='ag'?'flex':'none';}
@@ -1547,13 +1586,6 @@ function buildAllocBox(sel){
   box.querySelectorAll('input').forEach(inp=>inp.onchange=()=>inp.closest('.allocchk').classList.toggle('on',inp.checked));
 }
 function getAlloc(){return [...document.querySelectorAll('#allocBox input:checked')].map(i=>i.value);}
-function buildNextSelect(cur){
-  const sel=document.getElementById('f-next');
-  let opts=NEXT_ACTIONS.slice();
-  if(cur&&!opts.includes(cur))opts=[cur].concat(opts);
-  sel.innerHTML=opts.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
-  sel.value=cur||NEXT_ACTIONS[0];
-}
 function buildValueSelect(cat,cur,preserve){
   const sel=document.getElementById('f-value');
   const vals=valueRange(cat); cur=+cur||0;
@@ -1572,11 +1604,10 @@ function openModal(id,presetCat){
   document.getElementById('mTitle').textContent=id?'Editar pipe':'Novo pipe';
   document.getElementById('btnDel').style.display=id?'block':'none';
   document.getElementById('f-client').value=p.client||'';
+  fillClientList();
   document.getElementById('f-cat').value=p.cat||presetCat||'rv';
   document.getElementById('f-subtype').value=p.subtype||'Previdência';
-  document.getElementById('f-stage').value=p.stage||'Primeiro contato';
   buildNP(p.nota==null?5:p.nota);
-  buildNextSelect(p.next);
   buildValueSelect(document.getElementById('f-cat').value, p.value, true);
   buildAllocBox(p.alloc||[]);
   document.getElementById('f-date').value=p.date||'';
@@ -1594,10 +1625,12 @@ function saveModal(){
   const client=document.getElementById('f-client').value.trim();
   if(!client){document.getElementById('f-client').focus();return;}
   const cat=document.getElementById('f-cat').value;
-  const data={client,cat,stage:document.getElementById('f-stage').value,
+  /* estagio e proxima acao sairam do formulario: preserva o que ja existia no pipe */
+  const prev0=editId?(pipes.find(x=>x.id===editId)||{}):{};
+  const data={client,cat,stage:prev0.stage||'Primeiro contato',
     subtype:cat==='cap'?document.getElementById('f-subtype').value:'',
     nota:selNota,value:parseNum(document.getElementById('f-value').value),
-    date:document.getElementById('f-date').value,next:document.getElementById('f-next').value,
+    date:document.getElementById('f-date').value,next:prev0.next||'',
     notes:document.getElementById('f-notes').value.trim(),
     alloc:cat==='ag'?getAlloc():[]};
   if(editId){Object.assign(pipes.find(x=>x.id===editId),data);}
@@ -1748,6 +1781,94 @@ function inSelMonthDate(s){try{if(!s)return false;const d=new Date(s+'T00:00:00'
 
 /* Realizado = ganhos do historico fechados no mes selecionado, nas categorias da meta (fn = filtro extra, ex: subtype) */
 function realizedByCats(cats,fn){return sumByCats((history||[]).filter(h=>h&&h.outcome==='Ganho'),cats,h=>inSelMonthISO(h.closedAt)&&(!fn||fn(h)));}
+
+/* ════════ MEREO (nota 1-5 da assessoria) ════════
+   Pesos: Captação 40% · Alocação 20% · NPS 20% · Crossell 10% · Índice comercial 10%
+   Cada componente vira nota 1-5 pelo atingimento: ≥100%→5 · ≥92%→4 · ≥84%→3 · ≥80%→2 · abaixo→1 */
+const MEREO_KEY='ricoPipeline.mereo';
+let mereoData={};
+function loadMereo(){try{const raw=localStorage.getItem(MEREO_KEY);mereoData=raw?(JSON.parse(raw)||{}):{};}catch(e){mereoData={};}}
+function saveMereo(){try{localStorage.setItem(MEREO_KEY,JSON.stringify(mereoData));}catch(e){}try{cloudScheduleBackup();}catch(e){}}
+/* entradas manuais do mes: cartoes emitidos, NPS (assume nota maxima se vazio) e indice comercial */
+function mereoFor(y,m){const o=mereoData[y+'-'+m]||{};return{cards:+o.cards||0,nps:(o.nps==null?100:+o.nps),ic:(o.ic==null?100:+o.ic)};}
+function mereoLevel(pct){if(pct>=100)return 5;if(pct>=92)return 4;if(pct>=84)return 3;if(pct>=80)return 2;return 1;}
+function withMonth(y,m,fn){const oy=dashY,om=dashM;dashY=y;dashM=m;try{return fn();}finally{dashY=oy;dashM=om;}}
+function monthHasData(y,m){
+  return withMonth(y,m,()=>{
+    try{
+      const anyWon=(history||[]).some(h=>h&&h.outcome==='Ganho'&&inSelMonthISO(h.closedAt));
+      const mk=manualReal[y+'-'+m];
+      const anyManual=!!(mk&&Object.keys(mk).some(k=>+mk[k]>0));
+      return anyWon||anyManual||!!mereoData[y+'-'+m];
+    }catch(e){return false;}
+  });
+}
+function mereoCalc(y,m){
+  return withMonth(y,m,()=>{
+    const mm=mereoFor(y,m);
+    /* Alocação consolidada: AG + RV + previdência (wval ja aplica 1,25x na previdência) */
+    const prevReal=realizedByCats(['cap'],h=>subtypeOf(h)==='Previdência');
+    const alocReal=realizedByCats(['ag','rv'])+manualFor('aloc')+manualFor('rv')+prevReal;
+    const alocMeta=+goals.aloc||0;
+    /* Captação: todos os subtipos; previdência e STVM ja entram com 1,25x via wval */
+    const capReal=realizedByCats(['cap'])+manualFor('cap');
+    const capMeta=+goals.cap||0;
+    /* Crossell em pontos: cartão=1pt · consórcio 1pt/10k · seguros 1pt/1k · meta 25pts */
+    const segReal=realizedByCats(['seg'])+manualFor('seg');
+    const conReal=realizedByCats(['con'])+manualFor('con');
+    const pts=mm.cards+conReal/10000+segReal/1000;
+    const pc=(v,meta)=>meta>0?v/meta*100:0;
+    const comps=[
+      {key:'cap', name:'Captação',         w:.40, pct:pc(capReal,capMeta),  detail:brl(capReal)+' / '+brl(capMeta)},
+      {key:'aloc',name:'Alocação',         w:.20, pct:pc(alocReal,alocMeta),detail:brl(alocReal)+' / '+brl(alocMeta)},
+      {key:'nps', name:'NPS',              w:.20, pct:pc(mm.nps,60),        detail:'nota '+mm.nps+' · meta 60'},
+      {key:'cross',name:'Crossell',        w:.10, pct:pc(pts,25),           detail:(Math.round(pts*10)/10).toString().replace('.',',')+' / 25 pts'},
+      {key:'ic',  name:'Índice comercial', w:.10, pct:+mm.ic||0,            detail:mm.ic+'%'}
+    ];
+    comps.forEach(c=>{c.level=mereoLevel(c.pct);});
+    const score=comps.reduce((a,c)=>a+c.level*c.w,0);
+    return {score,comps};
+  });
+}
+function mereoSemester(y,m){
+  const start=m<6?0:6;
+  const now=new Date(), curKey=now.getFullYear()*12+now.getMonth();
+  const months=[];let sum=0,n=0;
+  for(let i=0;i<6;i++){
+    const mi=start+i, key=y*12+mi;
+    let sc=null;
+    if(key<=curKey&&monthHasData(y,mi))sc=mereoCalc(y,mi).score;
+    if(sc!=null){sum+=sc;n++;}
+    months.push({m:mi,score:sc});
+  }
+  return {months,avg:n?sum/n:null,label:(start===0?'1º':'2º')+' semestre '+y};
+}
+function mereoCardHTML(){
+  const mer=mereoCalc(dashY,dashM);
+  const sem=mereoSemester(dashY,dashM);
+  const lvlColor=l=>l>=5?'var(--green)':l>=4?'#7dd3a8':l>=3?'var(--yellow)':l>=2?'#f59e5b':'var(--red)';
+  const f1=v=>(Math.round(v*10)/10).toFixed(1).replace('.',',');
+  const rows=mer.comps.map(c=>`<div class="mer-row">
+    <span class="mer-lv" style="background:${lvlColor(c.level)}1f;color:${lvlColor(c.level)};border-color:${lvlColor(c.level)}55">${c.level}</span>
+    <span class="mer-name">${c.name}<span class="mer-w">${Math.round(c.w*100)}%</span></span>
+    <span class="mer-det">${c.detail}</span>
+    <span class="mer-pct">${c.pct>=999?'999+':Math.round(c.pct)}%</span>
+  </div>`).join('');
+  const MON_PT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cells=sem.months.map(o=>`<div class="mer-sm ${o.m===dashM?'cur':''}"><span class="l">${MON_PT[o.m]}</span><span class="v">${o.score!=null?f1(o.score):'—'}</span></div>`).join('');
+  return `<div class="mereo-card">
+    <div class="mer-left">
+      <div class="mer-score" style="color:${lvlColor(Math.round(mer.score))}">${f1(mer.score)}</div>
+      <div class="mer-cap">MEREO · ${monthLabel()}</div>
+    </div>
+    <div class="mer-mid">${rows}</div>
+    <div class="mer-right">
+      <div class="mer-sem-t">${sem.label}</div>
+      <div class="mer-sem">${cells}</div>
+      <div class="mer-sem-avg">média do semestre: <b>${sem.avg!=null?f1(sem.avg):'—'}</b></div>
+    </div>
+  </div>`;
+}
 /* Pipeline aberto do mes selecionado, dividido por rank (A/B/C); fn = filtro extra opcional */
 function pipelineByRank(cats,fn){
   const out={a:0,b:0,c:0};
@@ -1776,7 +1897,7 @@ function goalDefs(){
 /* toggle board/dash */
 function showBoard(){view='board';document.body.classList.remove('view-dash');}
 function openDash(){
-  goals=loadGoals();loadManual();dashEditing=false;view='dash';
+  goals=loadGoals();loadManual();loadMereo();dashEditing=false;view='dash';
   document.body.classList.add('view-dash');
   renderDash();
 }
@@ -1856,7 +1977,7 @@ function renderDash(){
       </div>
     </div>`;
   });
-  body.innerHTML=`<div class="dp-grid">${cards||'<div class="dp-empty">Sem metas.</div>'}</div>`;
+  body.innerHTML=mereoCardHTML()+`<div class="dp-grid">${cards||'<div class="dp-empty">Sem metas.</div>'}</div>`;
 }
 
 function renderDashEdit(){
@@ -1874,6 +1995,12 @@ function renderDashEdit(){
   h+='<div class="dash-mtitle" style="margin-top:18px">Realizado já feito no mês (manual)</div>';
   h+='<div class="dash-mnote">Para ter controle total: some aqui o que você fez fora do app. Os pipes marcados como Ganho no mês já entram automaticamente.</div>';
   rows.forEach(r=>{h+=`<div class="dash-editrow"><label>${r.name}</label><input type="text" inputmode="numeric" id="manual-${r.key}" value="${brlFull(manualFor(r.key))}"></div>`;});
+  const mm=mereoFor(dashY,dashM);
+  h+='<div class="dash-mtitle" style="margin-top:18px">MEREO do mês</div>';
+  h+='<div class="dash-mnote">Cartão emitido = 1 ponto de Crossell. NPS e índice comercial vêm dos relatórios da assessoria (se não preencher, assume nota máxima).</div>';
+  h+=`<div class="dash-editrow"><label>Cartões emitidos</label><input type="text" inputmode="numeric" id="mer-cards" value="${mm.cards}"></div>`;
+  h+=`<div class="dash-editrow"><label>NPS (meta 60)</label><input type="text" inputmode="numeric" id="mer-nps" value="${mm.nps}"></div>`;
+  h+=`<div class="dash-editrow"><label>Índice comercial (%)</label><input type="text" inputmode="numeric" id="mer-ic" value="${mm.ic}"></div>`;
   h+=`<div class="dash-edit-actions">
     <button class="btn btn-ghost" id="dashResetGoals">Restaurar padrão</button>
     <button class="btn btn-primary" id="dashSaveGoals">Salvar metas</button>
@@ -1888,6 +2015,9 @@ function wireDashEdit(){
     });
     const mk=manualKey();manualReal[mk]=manualReal[mk]||{};
     GOAL_KEYS.forEach(k=>{const el=document.getElementById('manual-'+k);if(el)manualReal[mk][k]=parseNum(el.value);});
+    const gv=id=>{const el=document.getElementById(id);return el?parseNum(el.value):0;};
+    mereoData[dashY+'-'+dashM]={cards:gv('mer-cards'),nps:gv('mer-nps'),ic:gv('mer-ic')};
+    saveMereo();
     saveGoals();saveManual();dashEditing=false;renderDash();toast('Metas e realizado salvos ✓');
   };
   document.getElementById('dashResetGoals').onclick=()=>{
@@ -2329,6 +2459,18 @@ function wire(){
   document.getElementById('btnClose').onclick=closeModal;
   document.getElementById('btnCancel').onclick=closeModal;
   document.getElementById('btnSave').onclick=saveModal;
+  /* atalhos de data prevista */
+  document.querySelectorAll('#datePresets button').forEach(b=>{
+    b.onclick=()=>{
+      const d=new Date(), t=b.dataset.dp, dow=d.getDay();
+      if(t==='tomorrow')d.setDate(d.getDate()+1);
+      else if(t==='friday'){const add=(5-dow+7)%7;d.setDate(d.getDate()+(add===0?7:add));}
+      else if(t==='monday'){const add=(8-dow)%7;d.setDate(d.getDate()+(add===0?7:add));}
+      else if(t==='eom'){d.setMonth(d.getMonth()+1,0);}
+      document.getElementById('f-date').value=ymd(d);
+      b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),400);
+    };
+  });
   document.getElementById('f-cat').onchange=onCatChange;
   document.getElementById('btnDel').onclick=()=>{if(editId&&confirm('Excluir este pipe definitivamente?')){pipes=pipes.filter(x=>x.id!==editId);persist();render();closeModal();}};
   document.getElementById('btnExport').onclick=doExport;
