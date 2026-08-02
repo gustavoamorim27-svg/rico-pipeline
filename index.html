@@ -188,6 +188,13 @@ header{
 .mer-sm .l{display:block;font-size:9px;font-weight:800;color:var(--muted)}
 .mer-sm .v{display:block;font-family:'Sora';font-weight:800;font-size:12px;margin-top:1px}
 .mer-sem-avg{font-size:11px;color:var(--muted2);font-weight:700}
+.mer-sem.wrap{flex-wrap:wrap}
+.mer-sem.wrap .mer-sm{flex:0 0 calc(16.66% - 4px)}
+.mer-seg{display:flex;gap:2px;background:rgba(0,0,0,.3);border:1px solid var(--line2);border-radius:8px;padding:2px;margin-top:9px}
+.mer-seg button{font-family:'Manrope';font-weight:700;font-size:10.5px;border:none;background:transparent;color:var(--muted2);cursor:pointer;border-radius:6px;padding:4px 9px}
+.mer-seg button.on{background:var(--orange);color:#fff}
+.mer-editbtn{margin-top:7px;font-family:'Manrope';font-weight:700;font-size:10.5px;background:rgba(255,255,255,.06);border:1px solid var(--line2);color:var(--muted2);padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .13s}
+.mer-editbtn:hover{color:var(--text);background:rgba(255,255,255,.12)}
 @media(max-width:720px){.mereo-card{padding:13px 14px;gap:14px}.mer-name{flex-basis:112px}.mer-score{font-size:36px}}
 .dash-mnote{font-size:11px;color:var(--muted);margin:-4px 0 10px}
 .pc-nota{display:flex;align-items:center;gap:6px;margin-bottom:7px}
@@ -763,6 +770,27 @@ body.view-cal.cal-week .wk-grid{display:grid}
     <div class="hist-count" id="histCount"></div>
     <div class="histlist" id="histList"></div>
     <div class="mfoot"><div class="right"><button class="btn btn-ghost" id="histCloseBtn">Fechar</button></div></div>
+  </div>
+</div>
+
+<!-- modal lancamento MEREO -->
+<div class="overlay" id="mereoOverlay">
+  <div class="modal" style="max-width:520px">
+    <div class="mhead"><h2 id="mereoTitle">Lançar MEREO</h2><button class="xbtn" id="mereoClose">&times;</button></div>
+    <div class="mbody">
+      <div class="field full"><div class="dash-mnote" style="margin:0">Campo em branco = cálculo automático pelos pipes do app. Preencheu, vale o que você lançou (use o valor final, já com os multiplicadores de 1,25x).</div></div>
+      <div class="field"><label>Captação (R$)</label><input id="mo-cap" inputmode="numeric" placeholder="automático"></div>
+      <div class="field"><label>Alocação consolidada (R$)</label><input id="mo-aloc" inputmode="numeric" placeholder="automático"></div>
+      <div class="field"><label>Consórcio (R$)</label><input id="mo-con" inputmode="numeric" placeholder="automático"></div>
+      <div class="field"><label>Seguros (R$)</label><input id="mo-seg" inputmode="numeric" placeholder="automático"></div>
+      <div class="field"><label>Cartões emitidos</label><input id="mo-cards" inputmode="numeric" placeholder="0"></div>
+      <div class="field"><label>NPS (meta 60)</label><input id="mo-nps" inputmode="numeric" placeholder="assume 100"></div>
+      <div class="field"><label>Índice comercial (%)</label><input id="mo-ic" inputmode="numeric" placeholder="assume 100"></div>
+    </div>
+    <div class="mfoot">
+      <button class="delbtn" id="mereoClear">Limpar mês</button>
+      <div class="right"><button class="btn btn-ghost" id="mereoCancel">Cancelar</button><button class="btn btn-primary" id="mereoSave">Salvar</button></div>
+    </div>
   </div>
 </div>
 
@@ -1789,8 +1817,17 @@ const MEREO_KEY='ricoPipeline.mereo';
 let mereoData={};
 function loadMereo(){try{const raw=localStorage.getItem(MEREO_KEY);mereoData=raw?(JSON.parse(raw)||{}):{};}catch(e){mereoData={};}}
 function saveMereo(){try{localStorage.setItem(MEREO_KEY,JSON.stringify(mereoData));}catch(e){}try{cloudScheduleBackup();}catch(e){}}
-/* entradas manuais do mes: cartoes emitidos, NPS (assume nota maxima se vazio) e indice comercial */
-function mereoFor(y,m){const o=mereoData[y+'-'+m]||{};return{cards:+o.cards||0,nps:(o.nps==null?100:+o.nps),ic:(o.ic==null?100:+o.ic)};}
+/* entradas manuais do mes: cartoes, NPS, indice comercial e overrides de valor por linha.
+   ov* = lancamento manual do resultado (se preenchido, substitui o calculo automatico dos pipes) */
+function mereoFor(y,m){const o=mereoData[y+'-'+m]||{};return{
+  cards:+o.cards||0,
+  nps:(o.nps==null?100:+o.nps),
+  ic:(o.ic==null?100:+o.ic),
+  npsSet:o.nps!=null, icSet:o.ic!=null,
+  ovCap:(o.ovCap==null?null:+o.ovCap),
+  ovAloc:(o.ovAloc==null?null:+o.ovAloc),
+  ovSeg:(o.ovSeg==null?null:+o.ovSeg),
+  ovCon:(o.ovCon==null?null:+o.ovCon)};}
 function mereoLevel(pct){if(pct>=100)return 5;if(pct>=92)return 4;if(pct>=84)return 3;if(pct>=80)return 2;return 1;}
 function withMonth(y,m,fn){const oy=dashY,om=dashM;dashY=y;dashM=m;try{return fn();}finally{dashY=oy;dashM=om;}}
 function monthHasData(y,m){
@@ -1808,27 +1845,55 @@ function mereoCalc(y,m){
     const mm=mereoFor(y,m);
     /* Alocação consolidada: AG + RV + previdência (wval ja aplica 1,25x na previdência) */
     const prevReal=realizedByCats(['cap'],h=>subtypeOf(h)==='Previdência');
-    const alocReal=realizedByCats(['ag','rv'])+manualFor('aloc')+manualFor('rv')+prevReal;
+    const alocAuto=realizedByCats(['ag','rv'])+manualFor('aloc')+manualFor('rv')+prevReal;
+    const alocReal=mm.ovAloc!=null?mm.ovAloc:alocAuto;
     const alocMeta=+goals.aloc||0;
     /* Captação: todos os subtipos; previdência e STVM ja entram com 1,25x via wval */
-    const capReal=realizedByCats(['cap'])+manualFor('cap');
+    const capAuto=realizedByCats(['cap'])+manualFor('cap');
+    const capReal=mm.ovCap!=null?mm.ovCap:capAuto;
     const capMeta=+goals.cap||0;
     /* Crossell em pontos: cartão=1pt · consórcio 1pt/10k · seguros 1pt/1k · meta 25pts */
-    const segReal=realizedByCats(['seg'])+manualFor('seg');
-    const conReal=realizedByCats(['con'])+manualFor('con');
+    const segReal=mm.ovSeg!=null?mm.ovSeg:(realizedByCats(['seg'])+manualFor('seg'));
+    const conReal=mm.ovCon!=null?mm.ovCon:(realizedByCats(['con'])+manualFor('con'));
     const pts=mm.cards+conReal/10000+segReal/1000;
     const pc=(v,meta)=>meta>0?v/meta*100:0;
+    const mk=b=>b?'✎ ':'';
     const comps=[
-      {key:'cap', name:'Captação',         w:.40, pct:pc(capReal,capMeta),  detail:brl(capReal)+' / '+brl(capMeta)},
-      {key:'aloc',name:'Alocação',         w:.20, pct:pc(alocReal,alocMeta),detail:brl(alocReal)+' / '+brl(alocMeta)},
-      {key:'nps', name:'NPS',              w:.20, pct:pc(mm.nps,60),        detail:'nota '+mm.nps+' · meta 60'},
-      {key:'cross',name:'Crossell',        w:.10, pct:pc(pts,25),           detail:(Math.round(pts*10)/10).toString().replace('.',',')+' / 25 pts'},
-      {key:'ic',  name:'Índice comercial', w:.10, pct:+mm.ic||0,            detail:mm.ic+'%'}
+      {key:'cap', name:'Captação',         w:.40, pct:pc(capReal,capMeta),  detail:mk(mm.ovCap!=null)+brl(capReal)+' / '+brl(capMeta)},
+      {key:'aloc',name:'Alocação',         w:.20, pct:pc(alocReal,alocMeta),detail:mk(mm.ovAloc!=null)+brl(alocReal)+' / '+brl(alocMeta)},
+      {key:'nps', name:'NPS',              w:.20, pct:pc(mm.nps,60),        detail:'nota '+mm.nps+(mm.npsSet?'':' (assumida)')+' · meta 60'},
+      {key:'cross',name:'Crossell',        w:.10, pct:pc(pts,25),           detail:mk(mm.ovSeg!=null||mm.ovCon!=null)+(Math.round(pts*10)/10).toString().replace('.',',')+' / 25 pts'},
+      {key:'ic',  name:'Índice comercial', w:.10, pct:+mm.ic||0,            detail:mm.ic+'%'+(mm.icSet?'':' (assumido)')}
     ];
     comps.forEach(c=>{c.level=mereoLevel(c.pct);});
     const score=comps.reduce((a,c)=>a+c.level*c.w,0);
-    return {score,comps};
+    return {score,comps,raw:{capReal,capMeta,alocReal,alocMeta,pts,nps:mm.nps,ic:mm.ic}};
   });
+}
+/* consolidado de varios meses (semestre/ano): soma valores, media das notas mensais */
+function mereoConsolidated(y,ms){
+  const now=new Date(),curKey=now.getFullYear()*12+now.getMonth();
+  const used=ms.filter(mi=>y*12+mi<=curKey&&monthHasData(y,mi));
+  const byMonth={};
+  let capR=0,capM=0,alocR=0,alocM=0,pts=0,npsS=0,icS=0,scS=0;
+  used.forEach(mi=>{
+    const c=mereoCalc(y,mi);
+    byMonth[mi]=c.score;scS+=c.score;
+    capR+=c.raw.capReal;capM+=c.raw.capMeta;alocR+=c.raw.alocReal;alocM+=c.raw.alocMeta;
+    pts+=c.raw.pts;npsS+=c.raw.nps;icS+=c.raw.ic;
+  });
+  const n=used.length;
+  const pc=(v,mta)=>mta>0?v/mta*100:0;
+  const npsAvg=n?npsS/n:0, icAvg=n?icS/n:0;
+  const comps=[
+    {key:'cap', name:'Captação',         w:.40, pct:pc(capR,capM),  detail:brl(capR)+' / '+brl(capM)},
+    {key:'aloc',name:'Alocação',         w:.20, pct:pc(alocR,alocM),detail:brl(alocR)+' / '+brl(alocM)},
+    {key:'nps', name:'NPS',              w:.20, pct:pc(npsAvg,60),  detail:'média '+Math.round(npsAvg)+' · meta 60'},
+    {key:'cross',name:'Crossell',        w:.10, pct:pc(pts,25*n),   detail:(Math.round(pts*10)/10).toString().replace('.',',')+' / '+(25*n)+' pts'},
+    {key:'ic',  name:'Índice comercial', w:.10, pct:icAvg,          detail:'média '+Math.round(icAvg)+'%'}
+  ];
+  comps.forEach(c=>{c.level=mereoLevel(c.pct);});
+  return {n,score:n?scS/n:null,comps,byMonth};
 }
 function mereoSemester(y,m){
   const start=m<6?0:6;
@@ -1843,31 +1908,76 @@ function mereoSemester(y,m){
   }
   return {months,avg:n?sum/n:null,label:(start===0?'1º':'2º')+' semestre '+y};
 }
+let mereoView='month';
 function mereoCardHTML(){
-  const mer=mereoCalc(dashY,dashM);
-  const sem=mereoSemester(dashY,dashM);
   const lvlColor=l=>l>=5?'var(--green)':l>=4?'#7dd3a8':l>=3?'var(--yellow)':l>=2?'#f59e5b':'var(--red)';
   const f1=v=>(Math.round(v*10)/10).toFixed(1).replace('.',',');
-  const rows=mer.comps.map(c=>`<div class="mer-row">
+  const MON_PT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const sem=mereoSemester(dashY,dashM);
+  let score,comps,capLabel,rightHTML;
+  if(mereoView==='month'){
+    const mer=mereoCalc(dashY,dashM);
+    score=mer.score;comps=mer.comps;capLabel='MEREO · '+monthLabel();
+    const cells=sem.months.map(o=>`<div class="mer-sm ${o.m===dashM?'cur':''}"><span class="l">${MON_PT[o.m]}</span><span class="v">${o.score!=null?f1(o.score):'—'}</span></div>`).join('');
+    rightHTML=`<div class="mer-sem-t">${sem.label}</div><div class="mer-sem">${cells}</div><div class="mer-sem-avg">média do semestre: <b>${sem.avg!=null?f1(sem.avg):'—'}</b></div>`;
+  }else{
+    const ms=mereoView==='year'?Array.from({length:12},(_,i)=>i):sem.months.map(o=>o.m);
+    const con=mereoConsolidated(dashY,ms);
+    score=con.score;comps=con.comps;
+    capLabel='MEREO · '+(mereoView==='year'?'ano '+dashY:sem.label)+(con.n?' · '+con.n+' mês(es)':'');
+    const cells=ms.map(mi=>{const sc=con.byMonth[mi];return `<div class="mer-sm ${mi===dashM?'cur':''}"><span class="l">${MON_PT[mi]}</span><span class="v">${sc!=null?f1(sc):'—'}</span></div>`;}).join('');
+    rightHTML=`<div class="mer-sem-t">${mereoView==='year'?'meses do ano':'meses do semestre'}</div><div class="mer-sem${mereoView==='year'?' wrap':''}">${cells}</div><div class="mer-sem-avg">média das notas: <b>${con.n?f1(con.score):'—'}</b></div>`;
+  }
+  const rows=comps.map(c=>`<div class="mer-row">
     <span class="mer-lv" style="background:${lvlColor(c.level)}1f;color:${lvlColor(c.level)};border-color:${lvlColor(c.level)}55">${c.level}</span>
     <span class="mer-name">${c.name}<span class="mer-w">${Math.round(c.w*100)}%</span></span>
     <span class="mer-det">${c.detail}</span>
     <span class="mer-pct">${c.pct>=999?'999+':Math.round(c.pct)}%</span>
   </div>`).join('');
-  const MON_PT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const cells=sem.months.map(o=>`<div class="mer-sm ${o.m===dashM?'cur':''}"><span class="l">${MON_PT[o.m]}</span><span class="v">${o.score!=null?f1(o.score):'—'}</span></div>`).join('');
+  const seg=`<div class="mer-seg">
+    <button class="${mereoView==='month'?'on':''}" data-mv="month">Mês</button>
+    <button class="${mereoView==='sem'?'on':''}" data-mv="sem">Semestre</button>
+    <button class="${mereoView==='year'?'on':''}" data-mv="year">Ano</button>
+  </div>`;
   return `<div class="mereo-card">
     <div class="mer-left">
-      <div class="mer-score" style="color:${lvlColor(Math.round(mer.score))}">${f1(mer.score)}</div>
-      <div class="mer-cap">MEREO · ${monthLabel()}</div>
+      <div class="mer-score" style="color:${score!=null?lvlColor(Math.round(score)):'var(--muted)'}">${score!=null?f1(score):'—'}</div>
+      <div class="mer-cap">${capLabel}</div>
+      ${seg}
+      <button class="mer-editbtn" id="merEditBtn">✎ Lançar resultado de ${MON_PT[dashM]}</button>
     </div>
     <div class="mer-mid">${rows}</div>
-    <div class="mer-right">
-      <div class="mer-sem-t">${sem.label}</div>
-      <div class="mer-sem">${cells}</div>
-      <div class="mer-sem-avg">média do semestre: <b>${sem.avg!=null?f1(sem.avg):'—'}</b></div>
-    </div>
+    <div class="mer-right">${rightHTML}</div>
   </div>`;
+}
+/* modal de lancamento manual do MEREO do mes selecionado */
+function openMereoModal(){
+  const o=mereoData[dashY+'-'+dashM]||{};
+  document.getElementById('mereoTitle').textContent='Lançar MEREO · '+monthLabel();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=(v==null?'':String(v));};
+  set('mo-cap', o.ovCap!=null?brlFull(o.ovCap):null);
+  set('mo-aloc',o.ovAloc!=null?brlFull(o.ovAloc):null);
+  set('mo-con', o.ovCon!=null?brlFull(o.ovCon):null);
+  set('mo-seg', o.ovSeg!=null?brlFull(o.ovSeg):null);
+  set('mo-cards',o.cards!=null?o.cards:null);
+  set('mo-nps', o.nps!=null?o.nps:null);
+  set('mo-ic',  o.ic!=null?o.ic:null);
+  document.getElementById('mereoOverlay').classList.add('open');
+}
+function closeMereoModal(){document.getElementById('mereoOverlay').classList.remove('open');}
+function saveMereoModal(){
+  const key=dashY+'-'+dashM;
+  const g=id=>{const el=document.getElementById(id);const v=el?(el.value||'').trim():'';return v===''?null:parseNum(v);};
+  const o=Object.assign({},mereoData[key]||{});
+  const put=(k,v)=>{if(v==null)delete o[k];else o[k]=v;};
+  put('ovCap',g('mo-cap'));put('ovAloc',g('mo-aloc'));put('ovCon',g('mo-con'));put('ovSeg',g('mo-seg'));
+  put('cards',g('mo-cards'));put('nps',g('mo-nps'));put('ic',g('mo-ic'));
+  if(Object.keys(o).length)mereoData[key]=o;else delete mereoData[key];
+  saveMereo();renderDash();toast('MEREO de '+monthLabel()+' salvo ✓');closeMereoModal();
+}
+function clearMereoMonth(){
+  if(!confirm('Remover todos os lançamentos manuais deste mês? (volta ao cálculo automático)'))return;
+  delete mereoData[dashY+'-'+dashM];saveMereo();renderDash();toast('Lançamentos removidos — usando cálculo automático');closeMereoModal();
 }
 /* Pipeline aberto do mes selecionado, dividido por rank (A/B/C); fn = filtro extra opcional */
 function pipelineByRank(cats,fn){
@@ -1978,6 +2088,9 @@ function renderDash(){
     </div>`;
   });
   body.innerHTML=mereoCardHTML()+`<div class="dp-grid">${cards||'<div class="dp-empty">Sem metas.</div>'}</div>`;
+  document.querySelectorAll('.mer-seg button').forEach(b=>{b.onclick=()=>{mereoView=b.dataset.mv;renderDash();};});
+  const meb=document.getElementById('merEditBtn');
+  if(meb)meb.onclick=openMereoModal;
 }
 
 function renderDashEdit(){
@@ -2016,7 +2129,8 @@ function wireDashEdit(){
     const mk=manualKey();manualReal[mk]=manualReal[mk]||{};
     GOAL_KEYS.forEach(k=>{const el=document.getElementById('manual-'+k);if(el)manualReal[mk][k]=parseNum(el.value);});
     const gv=id=>{const el=document.getElementById(id);return el?parseNum(el.value):0;};
-    mereoData[dashY+'-'+dashM]={cards:gv('mer-cards'),nps:gv('mer-nps'),ic:gv('mer-ic')};
+    /* preserva overrides (ov*) ja lancados no modal do MEREO */
+    mereoData[dashY+'-'+dashM]=Object.assign({},mereoData[dashY+'-'+dashM]||{},{cards:gv('mer-cards'),nps:gv('mer-nps'),ic:gv('mer-ic')});
     saveMereo();
     saveGoals();saveManual();dashEditing=false;renderDash();toast('Metas e realizado salvos ✓');
   };
@@ -2477,6 +2591,11 @@ function wire(){
   document.getElementById('btnImport').onclick=()=>document.getElementById('importFile').click();
   document.getElementById('importFile').onchange=e=>{if(e.target.files[0])doImport(e.target.files[0]);e.target.value='';};
   document.getElementById('btnHist').onclick=openHist;
+  document.getElementById('mereoClose').onclick=closeMereoModal;
+  document.getElementById('mereoCancel').onclick=closeMereoModal;
+  document.getElementById('mereoSave').onclick=saveMereoModal;
+  document.getElementById('mereoClear').onclick=clearMereoMonth;
+  document.getElementById('mereoOverlay').onclick=e=>{if(e.target.id==='mereoOverlay')closeMereoModal();};
   document.querySelectorAll('#calLayers .cal-lay').forEach(b=>{b.onclick=()=>toggleCalLayer(b.dataset.lay);});
   syncCalLayerChips();
   document.getElementById('btnDash').onclick=openDash;
