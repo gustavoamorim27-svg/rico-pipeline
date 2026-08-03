@@ -1742,8 +1742,8 @@ function delHist(id){if(!confirm('Excluir este registro do histórico?'))return;
 
 /* DASHBOARD DE METAS - PAGINA COM 3 CENARIOS */
 const GOALS_KEY='ricoPipeline.goals';
-const GOALS_MIG_KEY='ricoPipeline.goals.mig2';
-const DEFAULT_GOALS={cap:1200000, aloc:1700000, rv:300000, seg:12000, con:200000};
+const GOALS_MIG_KEY='ricoPipeline.goals.mig3';
+const DEFAULT_GOALS={cap:800000, aloc:1700000, rv:300000, seg:12000, con:200000};
 const GOAL_KEYS=['cap','aloc','rv','seg','con'];
 /* Previdencia e STVM entram na captacao com peso 1,25x (regra de remuneracao) */
 const CAP_MULT=1.25;
@@ -1765,11 +1765,11 @@ function loadGoals(){
     return migrateGoals(g);
   }catch(e){return Object.assign({},DEFAULT_GOALS);}
 }
-/* migracao unica: captacao 1,2mi, seguros 12mil, remove meta isolada de previdencia */
+/* migracao mig3: meta de captacao liquida = 800 mil (MEREO 3 = piso, MEREO 5 = teto) */
 function migrateGoals(g){
   try{
     if(localStorage.getItem(GOALS_MIG_KEY)!=='1'){
-      g.cap=1200000; g.seg=12000; delete g.prev;
+      g.cap=800000;
       localStorage.setItem(GOALS_KEY,JSON.stringify(g));
       localStorage.setItem(GOALS_MIG_KEY,'1');
     }
