@@ -780,12 +780,12 @@ body.view-cal.cal-week .wk-grid{display:grid}
     <div class="mbody">
       <div class="field full"><div class="dash-mnote" style="margin:0">Campo em branco = cálculo automático pelos pipes do app. Preencheu, vale o que você lançou (use o valor final, já com os multiplicadores de 1,25x).</div></div>
       <div class="field"><label>Captação (R$)</label><input id="mo-cap" inputmode="numeric" placeholder="automático"></div>
-      <div class="field"><label>Alocação consolidada (R$)</label><input id="mo-aloc" inputmode="numeric" placeholder="automático"></div>
+      <div class="field"><label>Cesta Investimento (R$)</label><input id="mo-aloc" inputmode="numeric" placeholder="automático"></div>
       <div class="field"><label>Consórcio (R$)</label><input id="mo-con" inputmode="numeric" placeholder="automático"></div>
       <div class="field"><label>Seguros (R$)</label><input id="mo-seg" inputmode="numeric" placeholder="automático"></div>
       <div class="field"><label>Cartões emitidos</label><input id="mo-cards" inputmode="numeric" placeholder="0"></div>
-      <div class="field"><label>NPS (meta 60)</label><input id="mo-nps" inputmode="numeric" placeholder="assume 100"></div>
-      <div class="field"><label>Índice comercial (%)</label><input id="mo-ic" inputmode="numeric" placeholder="assume 100"></div>
+      <div class="field"><label>NPS (meta 41,30)</label><input id="mo-nps" inputmode="numeric" placeholder="assume meta 41,30"></div>
+      <div class="field"><label>Índice Comercial (%) · meta 83%</label><input id="mo-ic" inputmode="numeric" placeholder="assume 83"></div>
     </div>
     <div class="mfoot">
       <button class="delbtn" id="mereoClear">Limpar mês</button>
@@ -1821,14 +1821,18 @@ function saveMereo(){try{localStorage.setItem(MEREO_KEY,JSON.stringify(mereoData
    ov* = lancamento manual do resultado (se preenchido, substitui o calculo automatico dos pipes) */
 function mereoFor(y,m){const o=mereoData[y+'-'+m]||{};return{
   cards:+o.cards||0,
-  nps:(o.nps==null?100:+o.nps),
-  ic:(o.ic==null?100:+o.ic),
+  nps:(o.nps==null?41.30:+o.nps),
+  ic:(o.ic==null?83:+o.ic),
   npsSet:o.nps!=null, icSet:o.ic!=null,
   ovCap:(o.ovCap==null?null:+o.ovCap),
   ovAloc:(o.ovAloc==null?null:+o.ovAloc),
   ovSeg:(o.ovSeg==null?null:+o.ovSeg),
   ovCon:(o.ovCon==null?null:+o.ovCon)};}
-function mereoLevel(pct){if(pct>=100)return 5;if(pct>=92)return 4;if(pct>=84)return 3;if(pct>=80)return 2;return 1;}
+/* MEREO oficial RICO: cada componente tem sua curva de atingimento (%) -> nota 1..5, interpolada linearmente. 100% da meta = nota 3. */
+const MEREO_CURVE={ cap:[20,60,100,140,180], cross:[60,80,100,120,140], inv:[60,80,100,120,140], ic:[80,90,100,110,120], nps:[60,80,100,120,140] };
+const MEREO_META={ inv:2200000, cross:25, ic:83, nps:41.30 }; /* captacao usa goals.cap */
+function mereoScore(pct,c){ if(!c)c=MEREO_CURVE.cap; if(pct<=c[0])return 1; if(pct>=c[4])return 5; for(var i=0;i<4;i++){ if(pct<=c[i+1]) return (i+1)+(pct-c[i])/(c[i+1]-c[i]); } return 5; }
+function mereoLevel(pct){return mereoScore(pct,MEREO_CURVE.cap);} /* compat legado */
 function withMonth(y,m,fn){const oy=dashY,om=dashM;dashY=y;dashM=m;try{return fn();}finally{dashY=oy;dashM=om;}}
 function monthHasData(y,m){
   return withMonth(y,m,()=>{
@@ -1847,7 +1851,7 @@ function mereoCalc(y,m){
     const prevReal=realizedByCats(['cap'],h=>subtypeOf(h)==='Previdência');
     const alocAuto=realizedByCats(['ag','rv'])+manualFor('aloc')+manualFor('rv')+prevReal;
     const alocReal=mm.ovAloc!=null?mm.ovAloc:alocAuto;
-    const alocMeta=+goals.aloc||0;
+    const alocMeta=MEREO_META.inv; /* Cesta Investimento — meta oficial R$ 2,2 mi */
     /* Captação: todos os subtipos; previdência e STVM ja entram com 1,25x via wval */
     const capAuto=realizedByCats(['cap'])+manualFor('cap');
     const capReal=mm.ovCap!=null?mm.ovCap:capAuto;
@@ -1858,14 +1862,15 @@ function mereoCalc(y,m){
     const pts=mm.cards+conReal/10000+segReal/1000;
     const pc=(v,meta)=>meta>0?v/meta*100:0;
     const mk=b=>b?'✎ ':'';
+    const _fn=v=>String(v).replace('.',',');
     const comps=[
-      {key:'cap', name:'Captação',         w:.40, pct:pc(capReal,capMeta),  detail:mk(mm.ovCap!=null)+brl(capReal)+' / '+brl(capMeta)},
-      {key:'aloc',name:'Alocação',         w:.20, pct:pc(alocReal,alocMeta),detail:mk(mm.ovAloc!=null)+brl(alocReal)+' / '+brl(alocMeta)},
-      {key:'nps', name:'NPS',              w:.20, pct:pc(mm.nps,60),        detail:'nota '+mm.nps+(mm.npsSet?'':' (assumida)')+' · meta 60'},
-      {key:'cross',name:'Crossell',        w:.10, pct:pc(pts,25),           detail:mk(mm.ovSeg!=null||mm.ovCon!=null)+(Math.round(pts*10)/10).toString().replace('.',',')+' / 25 pts'},
-      {key:'ic',  name:'Índice comercial', w:.10, pct:+mm.ic||0,            detail:mm.ic+'%'+(mm.icSet?'':' (assumido)')}
+      {key:'cap',  name:'Captação Total',    w:.40, curva:MEREO_CURVE.cap,   pct:pc(capReal,capMeta),        detail:mk(mm.ovCap!=null)+brl(capReal)+' / '+brl(capMeta)},
+      {key:'cross',name:'Cesta Crossell',    w:.10, curva:MEREO_CURVE.cross, pct:pc(pts,MEREO_META.cross),   detail:mk(mm.ovSeg!=null||mm.ovCon!=null)+(Math.round(pts*10)/10).toString().replace('.',',')+' / '+MEREO_META.cross+' pts'},
+      {key:'inv',  name:'Cesta Investimento',w:.20, curva:MEREO_CURVE.inv,   pct:pc(alocReal,alocMeta),      detail:mk(mm.ovAloc!=null)+brl(alocReal)+' / '+brl(alocMeta)},
+      {key:'ic',   name:'Índice Comercial',  w:.10, curva:MEREO_CURVE.ic,    pct:pc(mm.ic,MEREO_META.ic),    detail:_fn(mm.ic)+'% / meta '+MEREO_META.ic+'%'+(mm.icSet?'':' (assumido)')},
+      {key:'nps',  name:'NPS',               w:.20, curva:MEREO_CURVE.nps,   pct:pc(mm.nps,MEREO_META.nps),  detail:'nota '+_fn(mm.nps)+' / meta '+_fn(MEREO_META.nps)+(mm.npsSet?'':' (assumida)')}
     ];
-    comps.forEach(c=>{c.level=mereoLevel(c.pct);});
+    comps.forEach(c=>{c.level=mereoScore(c.pct,c.curva);});
     const score=comps.reduce((a,c)=>a+c.level*c.w,0);
     return {score,comps,raw:{capReal,capMeta,alocReal,alocMeta,pts,nps:mm.nps,ic:mm.ic}};
   });
@@ -1886,13 +1891,13 @@ function mereoConsolidated(y,ms){
   const pc=(v,mta)=>mta>0?v/mta*100:0;
   const npsAvg=n?npsS/n:0, icAvg=n?icS/n:0;
   const comps=[
-    {key:'cap', name:'Captação',         w:.40, pct:pc(capR,capM),  detail:brl(capR)+' / '+brl(capM)},
-    {key:'aloc',name:'Alocação',         w:.20, pct:pc(alocR,alocM),detail:brl(alocR)+' / '+brl(alocM)},
-    {key:'nps', name:'NPS',              w:.20, pct:pc(npsAvg,60),  detail:'média '+Math.round(npsAvg)+' · meta 60'},
-    {key:'cross',name:'Crossell',        w:.10, pct:pc(pts,25*n),   detail:(Math.round(pts*10)/10).toString().replace('.',',')+' / '+(25*n)+' pts'},
-    {key:'ic',  name:'Índice comercial', w:.10, pct:icAvg,          detail:'média '+Math.round(icAvg)+'%'}
+    {key:'cap',  name:'Captação Total',    w:.40, curva:MEREO_CURVE.cap,   pct:pc(capR,capM),              detail:brl(capR)+' / '+brl(capM)},
+    {key:'cross',name:'Cesta Crossell',    w:.10, curva:MEREO_CURVE.cross, pct:pc(pts,MEREO_META.cross*n), detail:(Math.round(pts*10)/10).toString().replace('.',',')+' / '+(MEREO_META.cross*n)+' pts'},
+    {key:'inv',  name:'Cesta Investimento',w:.20, curva:MEREO_CURVE.inv,   pct:pc(alocR,alocM),            detail:brl(alocR)+' / '+brl(alocM)},
+    {key:'ic',   name:'Índice Comercial',  w:.10, curva:MEREO_CURVE.ic,    pct:pc(icAvg,MEREO_META.ic),    detail:'média '+Math.round(icAvg)+'% · meta '+MEREO_META.ic+'%'},
+    {key:'nps',  name:'NPS',               w:.20, curva:MEREO_CURVE.nps,   pct:pc(npsAvg,MEREO_META.nps),  detail:'média '+(Math.round(npsAvg*10)/10).toString().replace('.',',')+' / meta '+String(MEREO_META.nps).replace('.',',')}
   ];
-  comps.forEach(c=>{c.level=mereoLevel(c.pct);});
+  comps.forEach(c=>{c.level=mereoScore(c.pct,c.curva);});
   return {n,score:n?scS/n:null,comps,byMonth};
 }
 function mereoSemester(y,m){
