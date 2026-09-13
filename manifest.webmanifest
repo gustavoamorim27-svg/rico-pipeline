@@ -1,13 +1,13 @@
 {
-  "name": "Rico Pipeline",
-  "short_name": "Pipeline",
-  "description": "Pipeline de oportunidades — Rico",
+  "name": "Rico · Clientes e oportunidades",
+  "short_name": "Rico Clientes",
+  "description": "Clientes, carteiras e oportunidades em uma base pessoal sincronizada",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#070B2E",
-  "theme_color": "#070B2E",
+  "background_color": "#f5f5f0",
+  "theme_color": "#152c29",
   "icons": [
     {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
     {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
