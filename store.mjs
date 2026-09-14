@@ -61,7 +61,7 @@ export class VaultStore {
           this.state=next;this.pending=[];this.stamp=saved.stamp;await this.cache();this.onChange(this.state);this.onStatus('synced');return;
         }catch(e){if([409,412,400].includes(e.status)&&retry<3)continue;throw e;}
       }
-    });}catch(error){this.lastError=error;this.onStatus(error.status===403?'denied':'offline');}finally{this.busy=false;}
+    });}catch(error){this.lastError=error;this.onStatus(error.status===403?'denied':error.code==='full'?'full':'offline');}finally{this.busy=false;}
   }
   async close(){this.closed=true;clearInterval(this.timer);await this.serial;this.key=null;this.state=emptyState();this.pending=[];}
 }

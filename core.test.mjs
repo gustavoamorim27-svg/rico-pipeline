@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase} from './core.mjs';
 import {VaultStore} from './store.mjs';
+import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
 test('full backup imports preserve client tiers, assets, custom classes and goals',()=>{const source=emptyState();source.clients.x={id:'x',name:'Client',tier:'D'};source.assets.a={id:'a',clientId:'x',institution:'C6',class:'Renda Fixa',value:200000};source.settings.goals.cap=900000;source.settings.classes.items.push('Custom');const imported=applyOperations(emptyState(),importBase(source,emptyState()));assert.equal(imported.clients.x.tier,'D');assert.equal(imported.assets.a.value,200000);assert.equal(imported.settings.goals.cap,900000);assert.ok(imported.settings.classes.items.includes('Custom'));imported.settings.goals.cap=1100000;const again=applyOperations(imported,importBase(source,imported));assert.equal(again.settings.goals.cap,1100000);});
 test('migration preserves every original pipe field, client relationship and original snapshot',()=>{
@@ -32,3 +33,15 @@ test('two devices merge edits to separate clients and fields without overwriting
 test('offline edits survive an encrypted cache reload and sync later',async()=>{const transport=new MemoryTransport(),storage=new MemoryStorage(),access=generateKey();let a=new VaultStore({transport,storage});try{await a.open(access,{create:true});await settled(a);transport.offline=true;await a.commit([{type:'clients',id:'one',patch:{id:'one',name:'Saved offline'}}]);await settled(a);const cache=storage.getItem(a.cacheKey);assert.ok(!cache.includes('Saved offline'));await a.close();a=new VaultStore({transport,storage});await a.open(access);await settled(a);assert.equal(a.state.clients.one.name,'Saved offline');assert.equal(a.pending.length,1);transport.offline=false;await a.sync();assert.equal(a.pending.length,0);const {key,id}=await vaultCredentials(access);assert.equal((await unseal((await transport.read(id)).envelope,key)).clients.one.name,'Saved offline');}finally{await a.close();}});
 test('local storage failure rolls back the edit instead of reporting it saved',async()=>{const transport=new MemoryTransport(),storage=new MemoryStorage(),s=new VaultStore({transport,storage});try{await s.open(generateKey(),{create:true});await settled(s);storage.setItem=()=>{throw Error('quota');};await assert.rejects(s.commit([{type:'clients',id:'bad',patch:{name:'Not saved'}}]));assert.equal(s.state.clients.bad,undefined);assert.equal(s.pending.length,0);}finally{await s.close();}});
 test('deleted data is not revived by a stale unrelated edit from another device',async()=>{const transport=new MemoryTransport(),key=generateKey(),a=new VaultStore({transport,storage:new MemoryStorage()}),b=new VaultStore({transport,storage:new MemoryStorage()});try{await a.open(key,{create:true});await a.commit([{type:'pipes',id:'x',patch:{...original,id:'x'}}]);await settled(a);await b.open(key);await settled(b);await a.commit([{type:'pipes',id:'x',patch:{deletedAt:'2026-09-13'}}]);await settled(a);await b.commit([{type:'pipes',id:'x',patch:{notes:'Edited concurrently'}}]);await settled(b);assert.equal(b.state.pipes.x.deletedAt,'2026-09-13');assert.equal(values(b.state,'pipes').length,0);}finally{await a.close();await b.close();}});
+test('estimated position: sliders become one asset per class and zeroed classes are removed',()=>{
+  const assets=[];
+  const ops=core.estimateOperations(assets,'c1','Rico',500000,{'Renda Fixa':45,'Previdência':20,'Renda Variável':15,'Multimercados':0,'Não informado':20},'2026-09-14');
+  assert.equal(ops.length,4);
+  const state=core.applyOperations({...core.emptyState(),clients:{c1:{id:'c1',name:'X'}}},ops);
+  const est=core.estimateOf(Object.values(state.assets),'c1','rico');
+  assert.equal(est.total,500000);assert.deepEqual(est.pct,{'Renda Fixa':45,'Previdência':20,'Renda Variável':15,'Não informado':20});
+  const ops2=core.estimateOperations(Object.values(state.assets),'c1','Rico',400000,{'Renda Fixa':100,'Previdência':0,'Renda Variável':0,'Não informado':0},'2026-09-15');
+  const state2=core.applyOperations(state,ops2);
+  const live=Object.values(state2.assets).filter(a=>!a.deletedAt);
+  assert.equal(live.length,1);assert.equal(live[0].class,'Renda Fixa');assert.equal(live[0].value,400000);
+});

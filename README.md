@@ -14,13 +14,20 @@ Os nomes de cliente iguais (ignorando caixa e espaços repetidos) são vinculado
 
 Pipes antigos de renda variável ficam em **Histórico → Legado RV**; nenhum é eliminado. Podem ser reclassificados para uma categoria nova. Renda variável permanece disponível como classe de investimento na carteira.
 
+## Identidade visual
+
+Mesma linguagem do Hub do Assessor (`hub-gustavo-amorim`): fundo violeta com orbes animadas, painéis translúcidos, laranja `#ff621d` como cor de ação, tipografia Sora (títulos), Manrope (texto) e JetBrains Mono (rótulos). O logotipo Rico é o mesmo desenho vetorial do Hub, em `logo.mjs`. As cores por classe de investimento (Renda Fixa, Previdência, Multimercados, Fundo Aberto, Renda Variável, Fundos Listados, Alternativos, Internacional) seguem o Construtor de Carteiras do Hub e aparecem no donut, nos sliders e nas chips.
+
+A página nunca rola inteira: sidebar e barra superior ficam fixas e cada tela rola por dentro (colunas do quadro, lista de clientes, dias da agenda). A seta abaixo do logo recolhe a sidebar; a escolha fica guardada no dispositivo.
+
 ## Organização
 
-- **Pipes:** Captação, Alocação, Seguros e Consórcio. Prioridade A/B/C calculada pela nota do pipe, como antes. Arraste a alça entre colunas ou para as grandes zonas de categoria, Ganho e Lixeira. Um toque na alça abre os mesmos destinos; Escape/cancelamento encerra o movimento. Lixeira é reversível, com desfazer e restauração pelo histórico.
-- **Clientes:** cadastro separado, classificação **manual A/B/C/D** (novos e migrados começam sem classificação), filtros por classe e potencial, perfil, telefone, e-mail e contexto. A classe do cliente não muda a prioridade do pipe.
-- **Ficha do cliente:** donut por classe ou instituição, posições dentro/fora da Rico, potenciais e oportunidades vinculadas. Pode registrar um saldo geral com classe “Não informado” e detalhar depois. Evite manter o saldo agregado e as mesmas posições detalhadas simultaneamente, pois seriam contados duas vezes.
+- **Pipes:** Captação, Alocação, Seguros e Consórcio. Prioridade A/B/C calculada pela nota do pipe, como antes. Arraste a alça: o card levanta, segue o dedo e pode ser solto em outra coluna (muda a categoria) ou nos alvos Ganho e Lixeira que aparecem no topo. Um toque na alça abre os mesmos destinos; Escape/cancelamento encerra o movimento. Lixeira é reversível, com desfazer e restauração pelo histórico. Filtros em chips: prioridade, prazo (inclui **Atrasados** e **Hoje** com contagem) e subtipo de captação (recolhido atrás do botão Subtipo).
+- **Cliente no pipe:** o campo Cliente é uma busca no cadastro; toque em um resultado para vincular. Um nome que não existe cria o cliente automaticamente ao salvar o pipe.
+- **Clientes:** cadastro separado, classificação **manual A/B/C/D** (novos e migrados começam sem classificação), filtros por classe e potencial, perfil, telefone, e-mail e contexto. A classe do cliente não muda a prioridade do pipe. O cadastro também guarda se o cliente já fez **Financial Planning** e **Meus Objetivos**, o **aporte mensal** combinado e as **classes de investimento de que gosta** (chips clicáveis); tudo aparece na faixa de perfil da ficha.
+- **Ficha do cliente:** donut por classe ou instituição, posições dentro/fora da Rico, potenciais e oportunidades vinculadas. **Posição estimada:** informe a instituição e o patrimônio total e deslize a porcentagem de cada classe; o app grava uma posição por classe (marcada como *Estimada*, com o % informado) e o que sobrar entra como “Não informado” para o total bater. Reabrir o editor na mesma instituição carrega a estimativa anterior; classes zeradas são removidas. Posições detalhadas continuam podendo ser cadastradas à parte — evite duplicar o mesmo patrimônio nas duas formas.
 - **Metas:** resultados e cenários por mês. Previdência/STVM na captação têm peso 1,25. MEREO conserva os pesos/curvas anteriores, cesta de investimento de R$ 2,2 mi e pontos de crossell. Resultados históricos de RV continuam considerados; não existe meta separada de RV na interface.
-- **Agenda:** semana de próximos passos e retomadas.
+- **Agenda:** semana ou mês de próximos passos e retomadas. Cada card mostra o ícone da categoria do pipe e a borda na cor do cliente (estável por cliente). No mês, dias com mais de três itens mostram “+N mais”, que abre a semana correspondente.
 - **Minha base:** chave pessoal, sincronização, exportação/importação e classes de investimento adicionais.
 
 As classes iniciais vêm do `hub-assessor`: Renda Fixa, Previdência, Multimercados, Fundo Aberto, Renda Variável, Fundos Listados (exibidos como Fundos Imobiliários), Alternativos e Internacional.
@@ -53,7 +60,7 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 `node cloud.integration.mjs` requer rede: cria um único documento fictício criptografado, verifica leitura/gravação e conflito, e remove somente esse documento ao final. Nunca busca a coleção nem lê clientes reais.
 
-Os testes cobrem migração idempotente e não destrutiva, classes manuais, backup completo, cálculos legados, criptografia, duas instâncias concorrentes, fila offline, quota local e renderização das telas a partir do código. A revisão visual/gestual em Safari de iPad deve ser feita no aparelho; testes de código não substituem esse teste físico.
+Os testes cobrem migração idempotente e não destrutiva, classes manuais, backup completo, cálculos legados, criptografia, duas instâncias concorrentes, fila offline, quota local, posição estimada por sliders e renderização das telas a partir do código. A revisão visual/gestual em Safari de iPad deve ser feita no aparelho; testes de código não substituem esse teste físico.
 
 Documentação de referência: [Firestore REST updateDocument](https://firebase.google.com/docs/firestore/reference/rest/v1/projects.databases.documents/patch), [precondições](https://firebase.google.com/docs/firestore/reference/rest/v1/Precondition), [Pointer Events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events).
 

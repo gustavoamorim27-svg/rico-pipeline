@@ -1,12 +1,38 @@
 export const CATEGORIES = [
-  {id:'cap',name:'Captação',color:'#258777',soft:'#e5f3ee',icon:'arrow'},
-  {id:'ag',name:'Alocação',color:'#4475c7',soft:'#eaf0fb',icon:'pie'},
-  {id:'seg',name:'Seguros',color:'#b58b24',soft:'#fbf3db',icon:'shield'},
-  {id:'con',name:'Consórcio',color:'#8c67b8',soft:'#f1eafb',icon:'home'}
+  {id:'cap',name:'Captação',color:'#48d6a0',soft:'rgba(72,214,160,.16)',icon:'arrow'},
+  {id:'ag',name:'Alocação',color:'#7199ff',soft:'rgba(113,153,255,.18)',icon:'pie'},
+  {id:'seg',name:'Seguros',color:'#ffd075',soft:'rgba(255,208,117,.16)',icon:'shield'},
+  {id:'con',name:'Consórcio',color:'#b29aff',soft:'rgba(178,154,255,.18)',icon:'home'}
 ];
 export const CLASSES=['Renda Fixa','Previdência','Multimercados','Fundo Aberto','Renda Variável','Fundos Listados','Alternativos','Internacional','Não informado'];
 export const classLabel=x=>x==='Fundos Listados'?'Fundos Imobiliários':x;
-export const COLORS=['#438b7a','#5386cd','#8c74bd','#68ada9','#e89054','#bc9a42','#c87899','#506779','#c5cbc9'];
+// Cores por classe iguais às do Construtor de Carteiras do Hub do Assessor.
+export const CLASS_COLORS={'Renda Fixa':'#2BD9A6','Previdência':'#E8709B','Multimercados':'#7C8CFF','Fundo Aberto':'#5AC8A8','Renda Variável':'#F26522','Fundos Listados':'#FFB020','Fundos Imobiliários':'#FFB020','Alternativos':'#C77DFF','Internacional':'#36C5F0','Não informado':'#8d8aa6'};
+export const COLORS=['#2BD9A6','#7C8CFF','#F26522','#FFB020','#C77DFF','#36C5F0','#E8709B','#5AC8A8','#8d8aa6'];
+export const classColor=(name,i=0)=>CLASS_COLORS[name]||COLORS[i%COLORS.length];
+const slug=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+export const estimateId=(clientId,institution,cls)=>`est-${clientId}-${slug(institution)}-${slug(cls)}`;
+// Lê a posição estimada (sliders) de um cliente numa instituição: total e % por classe.
+export function estimateOf(assets,clientId,institution){
+  const norm=s=>String(s||'').trim().toLowerCase();
+  const mine=assets.filter(a=>a.clientId===clientId&&a.estimated&&!a.deletedAt&&norm(a.institution)===norm(institution));
+  const total=mine.reduce((n,a)=>n+(+a.value||0),0), pct={};
+  for(const a of mine)pct[a.class]=(pct[a.class]||0)+(total?Math.round((+a.value||0)/total*100):0);
+  return {total,pct,count:mine.length};
+}
+// Converte total + % por classe em operações sobre os registros de carteira (upsert por classe, remove o que zerou).
+export function estimateOperations(assets,clientId,institution,total,pct,asOf){
+  const ops=[], existing=new Map(assets.filter(a=>a.clientId===clientId&&a.estimated&&String(a.institution).trim().toLowerCase()===String(institution).trim().toLowerCase()).map(a=>[a.id,a]));
+  const stamp=new Date().toISOString();
+  for(const [cls,p] of Object.entries(pct)){
+    const id=estimateId(clientId,institution,cls), value=Math.round(total*(+p||0)/100*100)/100;
+    if(value>0)ops.push({type:'assets',id,patch:{id,clientId,institution,name:'Posição estimada',class:cls,value,asOf,estimated:true,pct:+p,deletedAt:null,updatedAt:stamp}});
+    else if(existing.has(id)&&!existing.get(id).deletedAt)ops.push({type:'assets',id,patch:{deletedAt:stamp,updatedAt:stamp}});
+    existing.delete(id);
+  }
+  for(const [id,a] of existing)if(!a.deletedAt)ops.push({type:'assets',id,patch:{deletedAt:stamp,updatedAt:stamp}});
+  return ops;
+}
 export const STAGES=['Primeiro contato','Em análise','Proposta enviada','Negociação','Aguardando decisão','Aceito falta push'];
 export const SUBTYPES=['TED','STVM','Previdência','PJ','Consultoria','Originação','Outros'];
 export const rank=n=>n>=8?'A':n>=5?'B':'C';
@@ -123,7 +149,7 @@ export async function vaultCredentials(access){
 export async function seal(value,key){
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const plain=new TextEncoder().encode(JSON.stringify(value));
-  if(plain.length>620000)throw Error('Sua base atingiu o limite desta versão. Exporte uma cópia antes de importar mais dados.');
+  if(plain.length>620000){const e=Error('Sua base atingiu o limite desta versão. Exporte uma cópia antes de importar mais dados.');e.code='full';throw e;}
   const encrypted=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,plain));
   let binary='';for(let i=0;i<encrypted.length;i+=8192)binary+=String.fromCharCode(...encrypted.subarray(i,i+8192));
   return {v:1,iv:bytesTo64(iv),ciphertext:btoa(binary)};
