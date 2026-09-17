@@ -57,14 +57,37 @@ export function validateState(s){
   if(s?.version!==3||!['clients','pipes','assets','settings','imports'].every(k=>s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])))throw Error('Este arquivo não é uma base de clientes compatível.');
   return s;
 }
+// Casa um nome importado com um cliente já cadastrado: nome igual, ou nome curto do cadastro (2+ palavras) que é o começo do nome completo importado.
+export function matchClientByName(existing,name){
+  const n=normalize(name);if(!n)return null;
+  const exact=existing.find(c=>normalize(c.name)===n);if(exact)return {client:exact,fuller:false};
+  const prefix=existing.filter(c=>{const e=normalize(c.name);return e.split(' ').length>=2&&n.startsWith(e+' ');});
+  return prefix.length===1?{client:prefix[0],fuller:true}:null;
+}
+const emptyValue=v=>v==null||v===''||v===false||(Array.isArray(v)&&!v.length)||v==='Não informado';
 export function importBase(source,state){
-  validateState(source);const ops=[];
-  for(const type of ['clients','pipes','assets','imports'])for(const [id,value] of Object.entries(source[type])){
+  validateState(source);const ops=[];const existing=values(state,'clients');const remap={};let created=0,merged=0,renamed=0;
+  for(const [id,value] of Object.entries(source.clients)){
     if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Registro inválido no backup.');
-    ops.push({type,id,onlyIfAbsent:true,patch:value});
+    if(Object.hasOwn(state.clients,id)){ops.push({type:'clients',id,onlyIfAbsent:true,patch:value});continue;}
+    const hit=matchClientByName(existing,value.name);
+    if(!hit){ops.push({type:'clients',id,onlyIfAbsent:true,patch:value});existing.push(value);created++;continue;}
+    const cur=hit.client;remap[id]=cur.id;merged++;
+    const fill={};
+    for(const [k,v] of Object.entries(value)){if(k==='id'||k==='createdAt')continue;if(k==='name'){if(hit.fuller){fill.name=v;renamed++;}continue;}
+      if(k==='potentials'){const mine=cur.potentials||{};fill.potentials={...(v||{}),...Object.fromEntries(Object.entries(mine).filter(([,x])=>x&&x!=='A mapear'))};continue;}
+      if(k==='notes'){if(v&&!(cur.notes||'').includes(v))fill.notes=cur.notes?cur.notes+'\n'+v:v;continue;}
+      if(emptyValue(cur[k])&&!emptyValue(v))fill[k]=v;}
+    if(Object.keys(fill).length)ops.push({type:'clients',id:cur.id,patch:{...fill,updatedAt:new Date().toISOString()}});
+  }
+  for(const type of ['pipes','assets','imports'])for(const [id,value] of Object.entries(source[type])){
+    if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Registro inválido no backup.');
+    const patch=value.clientId&&remap[value.clientId]?{...value,clientId:remap[value.clientId]}:value;
+    ops.push({type,id,onlyIfAbsent:true,patch});
   }
   const hasData=Object.keys(state.clients).length+Object.keys(state.pipes).length>0;
   for(const [id,value] of Object.entries(source.settings))if(value&&typeof value==='object'&&!Array.isArray(value))ops.push({type:'settings',id,patch:hasData?{...value,...state.settings[id]}:{...state.settings[id],...value}});
+  ops.summary={created,merged,renamed};
   return ops;
 }
 export const weight=p=>p.cat==='cap'&&['Previdência','STVM'].includes(p.subtype)?1.25:1;

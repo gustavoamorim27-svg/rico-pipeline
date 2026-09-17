@@ -45,3 +45,18 @@ test('estimated position: sliders become one asset per class and zeroed classes 
   const live=Object.values(state2.assets).filter(a=>!a.deletedAt);
   assert.equal(live.length,1);assert.equal(live[0].class,'Renda Fixa');assert.equal(live[0].value,400000);
 });
+test('importing a client list completes short names and merges by name instead of duplicating',()=>{
+  const state=core.applyOperations(core.emptyState(),[{type:'clients',id:'c1',patch:{id:'c1',name:'Mauricio Rocha',profile:'Moderado',potentials:{cap:'Alto'},notes:'antigo'}},{type:'clients',id:'c2',patch:{id:'c2',name:'Edu',potentials:{}}}]);
+  const source=core.emptyState();
+  source.clients['xl-1']={id:'xl-1',name:'Mauricio Rocha de Magalhaes Sampaio',tier:'A',profile:'Não informado',potentials:{con:'Alto'},notes:'Conta 689938'};
+  source.clients['xl-2']={id:'xl-2',name:'Eduardo Aparecido de Moraes',tier:'B',potentials:{}};
+  source.assets['xl-a1']={id:'xl-a1',clientId:'xl-1',institution:'Rico',class:'Não informado',value:100};
+  const ops=core.importBase(source,state);
+  assert.deepEqual(ops.summary,{created:1,merged:1,renamed:1});
+  const next=core.applyOperations(state,ops);
+  assert.equal(Object.keys(next.clients).length,3);
+  assert.equal(next.clients.c1.name,'Mauricio Rocha de Magalhaes Sampaio');assert.equal(next.clients.c1.tier,'A');assert.equal(next.clients.c1.profile,'Moderado');
+  assert.deepEqual(next.clients.c1.potentials,{con:'Alto',cap:'Alto'});assert.equal(next.clients.c1.notes,'antigo\nConta 689938');
+  assert.equal(next.assets['xl-a1'].clientId,'c1');
+  assert.equal(next.clients.c2.name,'Edu');assert.ok(next.clients['xl-2']);
+});
