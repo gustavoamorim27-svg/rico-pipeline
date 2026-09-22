@@ -2,7 +2,7 @@
 
 /* Paleta e tipografia do Hub do Assessor */
 :root {
-  --bg: #241263;
+  --bg: #150c3a;
   --sidebar: rgba(16, 10, 43, 0.74);
   --panel: rgba(16, 15, 44, 0.65);
   --panel-raised: rgba(42, 33, 75, 0.85);
@@ -44,7 +44,7 @@
 }
 /* Tema Rico: noite azul-marinho com laranja, coral e âmbar */
 :root[data-theme="rico"] {
-  --bg: #0b1020;
+  --bg: #090d1c;
   --sidebar: rgba(8, 12, 30, 0.74);
   --panel: rgba(12, 17, 40, 0.66);
   --panel-raised: rgba(24, 31, 62, 0.86);
@@ -68,7 +68,7 @@
 }
 /* Tema XP: grafite com dourado e âmbar */
 :root[data-theme="xp"] {
-  --bg: #0b0b0e;
+  --bg: #0c0c0f;
   --sidebar: rgba(12, 12, 15, 0.78);
   --panel: rgba(18, 18, 22, 0.7);
   --panel-raised: rgba(32, 30, 34, 0.9);
@@ -170,6 +170,18 @@ body {
   background: linear-gradient(165deg, var(--atm-1) 0%, var(--atm-2) 36%, var(--atm-3) 70%, var(--atm-4) 100%);
   contain: strict;
   animation: breathe 38s ease-in-out infinite;
+}
+/* Piso: a borda inferior do app termina na cor lisa do tema (a mesma do theme-color),
+   para a faixa que o iPadOS pinta abaixo do app continuar o fundo sem emenda. */
+.floor {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 26vh;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, var(--bg) 100%);
 }
 @keyframes breathe {
   0%, 100% { filter: hue-rotate(0deg) saturate(1); }
