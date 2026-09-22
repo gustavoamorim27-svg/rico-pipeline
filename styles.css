@@ -134,7 +134,7 @@
   display: none !important;
 }
 html {
-  background: var(--bg);
+  background: var(--bg) linear-gradient(165deg, var(--atm-1) 0%, var(--atm-2) 36%, var(--atm-3) 70%, var(--atm-4) 100%) fixed;
 }
 html,
 body {
@@ -155,6 +155,7 @@ body {
 #app {
   position: fixed;
   inset: 0;
+  min-height: 100lvh;
   overflow: hidden;
 }
 
@@ -163,6 +164,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
+  min-height: 100lvh;
   overflow: hidden;
   pointer-events: none;
   background: linear-gradient(165deg, var(--atm-1) 0%, var(--atm-2) 36%, var(--atm-3) 70%, var(--atm-4) 100%);
@@ -875,14 +877,7 @@ h3 {
 }
 /* Quadro de pipes: cabeçalho compacto para sobrar altura às colunas */
 .content[data-screen="board"] .page-title {
-  margin-bottom: 12px;
-}
-.content[data-screen="board"] .page-title h1 {
-  font-size: 24px;
-}
-.content[data-screen="board"] .page-title p {
-  margin-top: 4px;
-  font-size: 12px;
+  margin-bottom: 10px;
 }
 .content[data-screen="board"] .metrics {
   margin-bottom: 12px;
@@ -950,7 +945,68 @@ h3 {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+  min-height: 44px;
+}
+.page-title h1 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--muted);
+}
+.page-title h1::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--orange);
+  margin-right: 10px;
+  vertical-align: 2px;
+}
+/* Faixa de indicadores do quadro: uma linha só, para sobrar altura aos pipes */
+.stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  align-items: center;
+  padding: 9px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 12px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.stat svg {
+  width: 14px;
+  height: 14px;
+  align-self: center;
+  color: var(--subtle);
+}
+.stat b {
+  font-family: var(--heading);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.stat.hot b {
+  color: #ffb08a;
+}
+.stat.hot svg {
+  color: var(--orange);
+}
+.stat.due b {
+  color: #ffd166;
 }
 .page-title p {
   margin-top: 8px;
@@ -1247,7 +1303,7 @@ h3 {
 .column-body {
   display: grid;
   grid-auto-rows: max-content;
-  gap: 10px;
+  gap: 12px;
   align-content: start;
   flex: 1;
   min-height: 120px;
@@ -1270,7 +1326,7 @@ h3 {
   border-color: var(--border-strong);
 }
 .card-content {
-  padding: 14px 14px 12px 42px;
+  padding: 16px 16px 14px 44px;
 }
 .card-client {
   display: flex;
@@ -3315,4 +3371,41 @@ dialog::backdrop {
     width: 44px;
     height: 44px;
   }
+}
+
+/* Seletor de valor: presets + slider logarítmico + passo fino */
+.money-picker .chips {
+  margin-bottom: 8px;
+}
+.money-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.money-slider input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+.money-slider .icon-btn {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+.money-out {
+  font-family: var(--heading);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  min-width: 120px;
+  text-align: right;
+  color: #ffb08a;
+}
+.money-picker input[type="number"] {
+  font-size: 13px;
 }
