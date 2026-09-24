@@ -182,3 +182,53 @@ export async function unseal(envelope,key){
   try {const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(envelope.iv)},key,from64(envelope.ciphertext));return JSON.parse(new TextDecoder().decode(plain));}
   catch{throw Error('Não foi possível abrir a base com esta chave. Os dados locais foram preservados.');}
 }
+
+// ---- Vínculos automáticos entre pipes, carteira e potenciais ----------------------------------
+// Pipe de captação ou alocação -> posição estimada do cliente (mesmo valor, na instituição de origem).
+// Posição fora da Rico -> pipe de captação. Potencial mapeado -> pipe genérico da categoria.
+export const isRico=inst=>String(inst||'').trim().toLowerCase()==='rico';
+export const pipeAssetId=pipeId=>`pipe-asset-${pipeId}`;
+export const assetPipeId=assetId=>`asset-pipe-${assetId}`;
+export const potentialPipeId=(clientId,cat)=>`pot-pipe-${clientId}-${cat}`;
+export const estimatePipeId=(clientId,institution)=>`est-pipe-${clientId}-${slug(institution)}`;
+const classForPipe=p=>p.cat==='cap'?(p.subtype==='Previdência'?'Previdência':p.subtype==='STVM'?'Renda Variável':'Não informado'):({RF:'Renda Fixa',RV:'Renda Variável',Previdência:'Previdência',Fundos:'Fundo Aberto',COE:'Alternativos'})[(p.alloc||[])[0]]||'Não informado';
+// Operações de carteira derivadas de um pipe salvo (novo ou editado).
+export function pipeAssetOperations(pipe,state,asOf){
+  if(!pipe||!['cap','ag'].includes(pipe.cat)||pipe.fromAsset)return [];
+  const id=pipeAssetId(pipe.id),cur=state.assets[id],stamp=new Date().toISOString();
+  const gone=pipe.deletedAt||pipe.outcome==='Perdido'||pipe.retired;
+  if(!(pipe.value>0)||gone){return cur&&!cur.deletedAt?[{type:'assets',id,patch:{deletedAt:stamp,updatedAt:stamp}}]:[];}
+  const institution=pipe.cat==='ag'||pipe.outcome==='Ganho'?'Rico':(pipe.origin||'Outra instituição');
+  const patch={id,clientId:pipe.clientId,institution,name:(pipe.outcome==='Ganho'?'Captado · ':'Pipe · ')+(pipe.title||pipe.subtype||(pipe.cat==='ag'?'Alocação':'Captação')),class:classForPipe(pipe),value:pipe.value,asOf,notes:'Vinculado automaticamente ao pipe.',fromPipe:pipe.id,deletedAt:null,updatedAt:stamp};
+  if(cur&&!cur.deletedAt&&cur.institution===institution&&cur.value===pipe.value&&cur.class===patch.class&&cur.name===patch.name)return [];
+  return [{type:'assets',id,patch}];
+}
+// Pipe de captação derivado de uma posição informada fora da Rico.
+export function assetPipeOperations(asset,state,date){
+  if(!asset||asset.fromPipe||asset.estimated)return [];
+  const id=assetPipeId(asset.id),cur=state.pipes[id],stamp=new Date().toISOString();
+  if(isRico(asset.institution)||asset.deletedAt||!(asset.value>0)){return cur&&!cur.deletedAt&&!cur.outcome?[{type:'pipes',id,patch:{deletedAt:stamp,updatedAt:stamp}}]:[];}
+  if(cur){return cur.deletedAt||cur.outcome||cur.value===asset.value?[]:[{type:'pipes',id,patch:{value:asset.value,origin:asset.institution,updatedAt:stamp}}];}
+  const subtype=asset.class==='Previdência'?'Previdência':'TED';
+  return [{type:'pipes',id,patch:{id,clientId:asset.clientId,client:state.clients[asset.clientId]?.name||'',title:`Trazer ${asset.name||'posição'} do ${asset.institution}`,cat:'cap',value:asset.value,stage:'Primeiro contato',date,subtype,origin:asset.institution,nota:5,next:'',notes:'Criado automaticamente a partir da carteira.',alloc:[],snoozeUntil:null,retired:false,fromAsset:asset.id,createdAt:stamp,updatedAt:stamp}}];
+}
+// Um pipe de captação por instituição estimada fora da Rico, com o total da estimativa.
+export function estimatePipeOperations(clientId,institution,total,state,date){
+  if(isRico(institution))return [];
+  const id=estimatePipeId(clientId,institution),cur=state.pipes[id],stamp=new Date().toISOString();
+  if(!(total>0))return cur&&!cur.deletedAt&&!cur.outcome?[{type:'pipes',id,patch:{deletedAt:stamp,updatedAt:stamp}}]:[];
+  if(cur)return cur.deletedAt||cur.outcome||cur.value===total?[]:[{type:'pipes',id,patch:{value:total,updatedAt:stamp}}];
+  return [{type:'pipes',id,patch:{id,clientId,client:state.clients[clientId]?.name||'',title:`Trazer a carteira do ${institution}`,cat:'cap',value:total,stage:'Primeiro contato',date,subtype:'TED',origin:institution,nota:5,next:'',notes:'Criado automaticamente a partir da posição estimada.',alloc:[],snoozeUntil:null,retired:false,fromEstimate:true,createdAt:stamp,updatedAt:stamp}}];
+}
+// Potencial recém-mapeado (Alto/Médio/Baixo) sem pipe ativo na categoria -> pipe genérico.
+const LEVEL_NOTA={Alto:8,'Médio':5,Baixo:2};
+export function potentialPipeOperations(client,previous,state,date){
+  const ops=[],stamp=new Date().toISOString(),pot=client.potentials||{},before=previous?.potentials||{};
+  for(const cat of CATEGORIES){
+    const level=pot[cat.id];if(!LEVEL_NOTA[level]||before[cat.id]===level)continue;
+    const hasActive=Object.values(state.pipes).some(p=>p.clientId===client.id&&p.cat===cat.id&&!p.deletedAt&&!p.outcome&&!p.retired);
+    const id=potentialPipeId(client.id,cat.id);if(hasActive||state.pipes[id])continue;
+    ops.push({type:'pipes',id,patch:{id,clientId:client.id,client:client.name,title:`Potencial ${level.toLowerCase()} em ${cat.name.toLowerCase()}`,cat:cat.id,value:0,stage:'Primeiro contato',date,subtype:'',origin:'',nota:LEVEL_NOTA[level],next:'Definir a oportunidade',notes:'Criado automaticamente a partir do mapa de potencial.',alloc:[],snoozeUntil:null,retired:false,fromPotential:true,createdAt:stamp,updatedAt:stamp}});
+  }
+  return ops;
+}

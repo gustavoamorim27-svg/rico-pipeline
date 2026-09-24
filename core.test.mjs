@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -59,4 +59,44 @@ test('importing a client list completes short names and merges by name instead o
   assert.deepEqual(next.clients.c1.potentials,{con:'Alto',cap:'Alto'});assert.equal(next.clients.c1.notes,'antigo\nConta 689938');
   assert.equal(next.assets['xl-a1'].clientId,'c1');
   assert.equal(next.clients.c2.name,'Edu');assert.ok(next.clients['xl-2']);
+});
+
+test('a captação pipe creates a linked position at the origin institution and follows the pipe', () => {
+  const state=emptyState();state.clients.c1={id:'c1',name:'Ana'};
+  const pipe={id:'p1',clientId:'c1',cat:'cap',subtype:'Previdência',origin:'Itaú',value:200000};
+  let ops=pipeAssetOperations(pipe,state,'2026-09-22');
+  assert.equal(ops.length,1);assert.equal(ops[0].type,'assets');assert.equal(ops[0].patch.institution,'Itaú');assert.equal(ops[0].patch.class,'Previdência');assert.equal(ops[0].patch.value,200000);assert.equal(ops[0].patch.fromPipe,'p1');
+  const next=applyOperations(state,ops);
+  assert.deepEqual(pipeAssetOperations(pipe,next,'2026-09-22'),[]);
+  const won=pipeAssetOperations({...pipe,outcome:'Ganho'},next,'2026-09-22');assert.equal(won[0].patch.institution,'Rico');
+  const trashed=pipeAssetOperations({...pipe,deletedAt:'x'},next,'2026-09-22');assert.ok(trashed[0].patch.deletedAt);
+  assert.deepEqual(pipeAssetOperations({id:'p2',clientId:'c1',cat:'seg',value:5000},state,'2026-09-22'),[]);
+  assert.deepEqual(assetPipeOperations(next.assets[ops[0].id],next,'2026-09-22'),[]);
+});
+test('a position outside Rico creates a captação pipe; a Rico position does not', () => {
+  const state=emptyState();state.clients.c1={id:'c1',name:'Ana'};
+  const asset={id:'a1',clientId:'c1',institution:'Safra',name:'CDB',class:'Renda Fixa',value:150000};
+  const ops=assetPipeOperations(asset,state,'2026-09-22');
+  assert.equal(ops.length,1);assert.equal(ops[0].patch.cat,'cap');assert.equal(ops[0].patch.origin,'Safra');assert.equal(ops[0].patch.value,150000);assert.equal(ops[0].patch.subtype,'TED');
+  const next=applyOperations(state,ops);
+  assert.deepEqual(assetPipeOperations(asset,next,'2026-09-22'),[]);
+  assert.equal(assetPipeOperations({...asset,value:180000},next,'2026-09-22')[0].patch.value,180000);
+  assert.ok(assetPipeOperations({...asset,deletedAt:'x'},next,'2026-09-22')[0].patch.deletedAt);
+  assert.deepEqual(assetPipeOperations({...asset,id:'a2',institution:'Rico'},state,'2026-09-22'),[]);
+  assert.deepEqual(pipeAssetOperations(next.pipes[ops[0].id],next,'2026-09-22'),[]);
+});
+test('a newly mapped potential creates one generic pipe unless the client already has an active pipe there', () => {
+  const state=emptyState();state.clients.c1={id:'c1',name:'Ana',potentials:{}};
+  state.pipes.x={id:'x',clientId:'c1',cat:'cap',value:1};
+  const ops=potentialPipeOperations({id:'c1',name:'Ana',potentials:{cap:'Alto',seg:'Médio',con:'Sem potencial'}},state.clients.c1,state,'2026-09-22');
+  assert.equal(ops.length,1);assert.equal(ops[0].patch.cat,'seg');assert.equal(ops[0].patch.nota,5);assert.equal(ops[0].patch.value,0);
+  const next=applyOperations(state,ops);
+  assert.deepEqual(potentialPipeOperations({id:'c1',name:'Ana',potentials:{cap:'Alto',seg:'Médio'}},{potentials:{cap:'Alto',seg:'Médio'}},next,'2026-09-22'),[]);
+});
+test('an estimated portfolio outside Rico keeps one captação pipe per institution in sync', () => {
+  const state=emptyState();state.clients.c1={id:'c1',name:'Ana'};
+  const ops=estimatePipeOperations('c1','BTG',500000,state,'2026-09-22');assert.equal(ops[0].patch.value,500000);
+  const next=applyOperations(state,ops);
+  assert.equal(estimatePipeOperations('c1','BTG',600000,next,'2026-09-22')[0].patch.value,600000);
+  assert.deepEqual(estimatePipeOperations('c1','Rico',600000,next,'2026-09-22'),[]);
 });

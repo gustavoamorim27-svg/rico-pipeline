@@ -2,7 +2,7 @@
 
 /* Paleta e tipografia do Hub do Assessor */
 :root {
-  --bg: #150c3a;
+  --bg: #241263;
   --sidebar: rgba(16, 10, 43, 0.74);
   --panel: rgba(16, 15, 44, 0.65);
   --panel-raised: rgba(42, 33, 75, 0.85);
@@ -44,7 +44,7 @@
 }
 /* Tema Rico: noite azul-marinho com laranja, coral e âmbar */
 :root[data-theme="rico"] {
-  --bg: #090d1c;
+  --bg: #0b1020;
   --sidebar: rgba(8, 12, 30, 0.74);
   --panel: rgba(12, 17, 40, 0.66);
   --panel-raised: rgba(24, 31, 62, 0.86);
@@ -68,7 +68,7 @@
 }
 /* Tema XP: grafite com dourado e âmbar */
 :root[data-theme="xp"] {
-  --bg: #0c0c0f;
+  --bg: #0b0b0e;
   --sidebar: rgba(12, 12, 15, 0.78);
   --panel: rgba(18, 18, 22, 0.7);
   --panel-raised: rgba(32, 30, 34, 0.9);
@@ -608,7 +608,7 @@ h3 {
   --sidebar-w: 76px;
 }
 .sidebar {
-  background: var(--sidebar);
+  background: linear-gradient(to bottom, var(--sidebar) 0%, var(--sidebar) calc(100% - 22vh), transparent 100%);
   backdrop-filter: blur(22px) saturate(1.2);
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
   border-right: 1px solid var(--border);
@@ -1568,7 +1568,7 @@ h3 {
 .drag-targets {
   display: none;
   position: fixed;
-  top: 8px;
+  bottom: 14px;
   right: 16px;
   left: calc(var(--sidebar-w, 224px) + 16px);
   z-index: 1001;
@@ -1584,7 +1584,7 @@ h3 {
 @keyframes targets-in {
   from {
     opacity: 0;
-    transform: translateY(-16px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -3420,4 +3420,10 @@ dialog::backdrop {
 }
 .money-picker input[type="number"] {
   font-size: 13px;
+}
+.card-value.undefined-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--subtle);
+  letter-spacing: 0;
 }
