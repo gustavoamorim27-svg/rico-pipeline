@@ -232,3 +232,19 @@ export function potentialPipeOperations(client,previous,state,date){
   }
   return ops;
 }
+
+// ---- Dias úteis: nada de pipe em sábado ou domingo ---------------------------------------------
+const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+export const isWeekend=iso=>{if(!iso)return false;const g=new Date(String(iso).slice(0,10)+'T12:00:00').getDay();return g===0||g===6;};
+// Sábado ou domingo vão para a segunda seguinte (ou, com back=true, para a sexta anterior).
+export function businessDay(iso,back=false){if(!iso)return iso;const d=new Date(String(iso).slice(0,10)+'T12:00:00');if(isNaN(d))return iso;while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+(back?-1:1));return isoOf(d);}
+// Corrige pipes abertos que ficaram com data ou retorno em fim de semana.
+export function weekendFixOperations(state){
+  const ops=[],stamp=new Date().toISOString();
+  for(const p of Object.values(state.pipes||{})){
+    if(p.deletedAt||p.outcome||p.retired)continue;
+    const patch={};if(isWeekend(p.date))patch.date=businessDay(p.date);if(isWeekend(p.snoozeUntil))patch.snoozeUntil=businessDay(p.snoozeUntil);
+    if(Object.keys(patch).length)ops.push({type:'pipes',id:p.id,patch:{...patch,updatedAt:stamp}});
+  }
+  return ops;
+}
