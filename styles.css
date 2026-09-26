@@ -1326,6 +1326,10 @@ h3 {
 }
 .pipe-card {
   position: relative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   background: var(--panel-raised);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1568,8 +1572,15 @@ h3 {
 .drag-targets {
   display: none;
   position: fixed;
-  bottom: 14px;
-  right: 16px;
+  position: re  bottom: 16px;
+  right: 16px;lative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   left: calc(var(--sidebar-w, 224px) + 16px);
   z-index: 1001;
   gap: 6px;
@@ -3426,4 +3437,14 @@ dialog::backdrop {
   font-weight: 600;
   color: var(--subtle);
   letter-spacing: 0;
+}
+
+/* Toque longo no card: um leve "afundar" avisa que o arraste vai começar */
+.pipe-card.holding {
+  transform: scale(0.97);
+  border-color: var(--orange);
+  transition: transform 0.26s ease-out, border-color 0.26s;
+}
+.card-client {
+  cursor: inherit;
 }
