@@ -1,4 +1,4 @@
-import {CATEGORIES,CLASSES,COLORS,STAGES,SUBTYPES,classLabel,classColor,estimateOf,estimateOperations,rank,money,shortMoney,today,uid,escapeHTML as esc,values,emptyState,applyOperations,active,weight,weighted,monthData,migrateLegacy,legacyPayload,generateKey,validateState,importBase,pipeAssetOperations,assetPipeOperations,estimatePipeOperations,potentialPipeOperations,isRico} from './core.mjs';
+import {CATEGORIES,CLASSES,COLORS,STAGES,SUBTYPES,classLabel,classColor,estimateOf,estimateOperations,rank,money,shortMoney,today,uid,escapeHTML as esc,values,emptyState,applyOperations,active,weight,weighted,monthData,migrateLegacy,legacyPayload,generateKey,validateState,importBase,pipeAssetOperations,assetPipeOperations,estimatePipeOperations,potentialPipeOperations,isRico,businessDay,isWeekend,weekendFixOperations} from './core.mjs';
 import {VaultStore,FirestoreTransport,readLegacyLocal} from './store.mjs';
 import {RICO_LOGO_PATH,RICO_LOGO_VIEWBOX} from './logo.mjs';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
@@ -81,7 +81,7 @@ function matchPipe(p){
   if(dateFilter==='none'&&p.date)return false;
   return true;
 }
-function pipeCard(p){const r=rank(p.nota),cat=cats(p.cat);return `<article class="pipe-card" data-pipe="${esc(p.id)}"><button class="grip" data-drag="${esc(p.id)}" aria-label="Mover pipe de ${esc(clientName(p))}" title="Arraste ou toque para mover">${icon('grip')}</button><div class="card-content"><button class="card-client" data-client="${esc(p.clientId)}"><span class="avatar">${initials(clientName(p))}</span><span>${esc(clientName(p))}</span></button><div class="card-title">${esc(p.title||p.subtype||cat.name)}${p.origin?' · '+esc(p.origin):''}</div><div class="card-value ${p.value?'':'undefined-value'}">${p.value?shortMoney(p.value):'Valor a definir'}</div><div class="card-meta"><span class="pill rank-${r}">${r} · ${r==='A'?'Quente':r==='B'?'Morno':'Frio'}</span><span class="stage">${esc(p.stage)}</span></div><div class="card-next">${icon('arrow')}<span>${esc(p.next||'Definir próximo passo')}</span></div><div class="card-bottom"><span class="${p.date&&p.date<today()?'overdue':''}">${dateLabel(p.date)}${weight(p)>1?' · 1,25×':''}</span><button data-edit-pipe="${esc(p.id)}" aria-label="Editar pipe de ${esc(clientName(p))}">Detalhes ↗</button></div></div></article>`;}
+function pipeCard(p){const r=rank(p.nota),cat=cats(p.cat);return `<article class="pipe-card" data-pipe="${esc(p.id)}" data-card-drag="${esc(p.id)}"><button class="grip" data-drag="${esc(p.id)}" aria-label="Mover pipe de ${esc(clientName(p))}" title="Arraste ou toque para mover">${icon('grip')}</button><div class="card-content"><div class="card-client"><span class="avatar">${initials(clientName(p))}</span><span>${esc(clientName(p))}</span></div><div class="card-title">${esc(p.title||p.subtype||cat.name)}${p.origin?' · '+esc(p.origin):''}</div><div class="card-value ${p.value?'':'undefined-value'}">${p.value?shortMoney(p.value):'Valor a definir'}</div><div class="card-meta"><span class="pill rank-${r}">${r} · ${r==='A'?'Quente':r==='B'?'Morno':'Frio'}</span><span class="stage">${esc(p.stage)}</span></div><div class="card-next">${icon('arrow')}<span>${esc(p.next||'Definir próximo passo')}</span></div><div class="card-bottom"><span class="${p.date&&p.date<today()?'overdue':''}">${dateLabel(p.date)}${weight(p)>1?' · 1,25×':''}</span><button data-edit-pipe="${esc(p.id)}" aria-label="Editar pipe de ${esc(clientName(p))}">Detalhes ↗</button></div></div></article>`;}
 function renderBoard(){const all=values(state,'pipes').filter(active), total=all.reduce((n,p)=>n+p.value,0), hot=all.filter(p=>rank(p.nota)==='A'), due=all.filter(p=>p.date&&p.date<=today());
   return pageTitle('Gestão de pipes','',button('Novo cliente','new-client','users')+button('Novo pipe','new-pipe','plus','primary'))+
     `<div class="stat-strip" aria-label="Resumo do pipeline"><span class="stat hot">${icon('arrow')}<b>${shortMoney(total)}</b><small>em ${all.length} pipes abertos</small></span><span class="stat">${icon('users')}<b>${new Set(all.map(p=>p.clientId)).size}</b><small>clientes com pipes</small></span><span class="stat">${icon('target')}<b>${shortMoney(hot.reduce((n,p)=>n+p.value,0))}</b><small>em ${hot.length} pipes quentes</small></span><span class="stat ${due.length?'due':''}">${icon('calendar')}<b>${due.length}</b><small>contatos para hoje ou em atraso</small></span></div>${filtersHTML()}<div class="board" aria-label="Quadro de oportunidades">${CATEGORIES.map(cat=>{const ps=values(state,'pipes').filter(p=>p.cat===cat.id&&matchPipe(p)).sort((a,b)=>(a.order??0)-(b.order??0)||(b.nota-a.nota));return `<section class="column" data-drop="${cat.id}" aria-label="${cat.name}"><div class="column-head"><span style="color:${cat.color}">${icon(cat.icon)}</span><h3>${cat.name}</h3><span class="count">${ps.length}</span><button class="icon-btn" data-new-cat="${cat.id}" aria-label="Novo pipe em ${cat.name}">${icon('plus')}</button></div><div class="column-sum">${shortMoney(ps.reduce((n,p)=>n+p.value,0))} em oportunidades</div><div class="column-body">${ps.length?ps.map(pipeCard).join(''):empty('Espaço para oportunidades','Toque no + ou arraste um pipe para cá.','plus')}</div></section>`;}).join('')}</div>`;
@@ -117,13 +117,13 @@ function renderAgenda(){
   if(agendaView==='month'){
     const first=new Date(base.getFullYear(),base.getMonth()+weekOffset,1,12),label=first.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
     const start=new Date(first);start.setDate(1-((first.getDay()+6)%7));
-    const cells=[];for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);cells.push(d);}
-    const rows=cells.length&&cells[35].getMonth()===first.getMonth()?6:5;
-    const total=cells.slice(0,rows*7).filter(d=>d.getMonth()===first.getMonth()).reduce((n,d)=>n+agendaPipes(isoDate(d)).length,0);
-    return pageTitle(`Agenda · ${label.charAt(0).toUpperCase()+label.slice(1)}`,'',nav,'AGENDA DE RELACIONAMENTO')+legend+`<div class="month-grid"><div class="month-head">${['seg','ter','qua','qui','sex','sáb','dom'].map(d=>`<span>${d}</span>`).join('')}</div>${cells.slice(0,rows*7).map(d=>{const date=isoDate(d),ps=agendaPipes(date),other=d.getMonth()!==first.getMonth(),shown=ps.slice(0,3);return `<section class="month-day ${date===today()?'today':''} ${other?'other':''} ${ps.length?'has':''}"><div class="month-num"><b>${d.getDate()}</b>${ps.length?`<span class="chip-count">${ps.length}</span>`:''}</div>${shown.map(p=>agendaCard(p,date,true)).join('')}${ps.length>3?`<button class="month-more" data-agenda-day="${date}">+${ps.length-3} mais</button>`:''}</section>`;}).join('')}</div>`;
+    const all=[];for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);all.push(d);}
+    const rows=all[35].getMonth()===first.getMonth()?6:5;const cells=all.slice(0,rows*7).filter(d=>d.getDay()!==0&&d.getDay()!==6);
+    const total=cells.filter(d=>d.getMonth()===first.getMonth()).reduce((n,d)=>n+agendaPipes(isoDate(d)).length,0);
+    return pageTitle(`Agenda · ${label.charAt(0).toUpperCase()+label.slice(1)}`,'',nav,'AGENDA DE RELACIONAMENTO')+legend+`<div class="month-grid"><div class="month-head">${['seg','ter','qua','qui','sex'].map(d=>`<span>${d}</span>`).join('')}</div>${cells.map(d=>{const date=isoDate(d),ps=agendaPipes(date),other=d.getMonth()!==first.getMonth(),shown=ps.slice(0,3);return `<section class="month-day ${date===today()?'today':''} ${other?'other':''} ${ps.length?'has':''}"><div class="month-num"><b>${d.getDate()}</b>${ps.length?`<span class="chip-count">${ps.length}</span>`:''}</div>${shown.map(p=>agendaCard(p,date,true)).join('')}${ps.length>3?`<button class="month-more" data-agenda-day="${date}">+${ps.length-3} mais</button>`:''}</section>`;}).join('')}</div>`;
   }
-  base.setDate(base.getDate()-((base.getDay()+6)%7)+weekOffset*7);const days=Array.from({length:7},(_,i)=>{const d=new Date(base);d.setDate(d.getDate()+i);return d;});
-  const range=`${days[0].toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} – ${days[6].toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}`;
+  base.setDate(base.getDate()-((base.getDay()+6)%7)+weekOffset*7);const days=Array.from({length:5},(_,i)=>{const d=new Date(base);d.setDate(d.getDate()+i);return d;});
+  const range=`${days[0].toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} – ${days[4].toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}`;
   return pageTitle(`Agenda · semana de ${range}`,'',nav,'AGENDA DE RELACIONAMENTO')+legend+`<div class="week-grid">${days.map(d=>{const date=isoDate(d),ps=agendaPipes(date);return `<section class="day ${date===today()?'today':''}"><div class="day-title">${d.toLocaleDateString('pt-BR',{weekday:'short'})}<b>${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</b></div>${ps.map(p=>agendaCard(p,date)).join('')||'<p class="small muted">Dia livre para conectar.</p>'}</section>`;}).join('')}</div>`;
 }
 function renderHistory(){const ps=Object.values(state.pipes).filter(p=>p.outcome||p.retired||p.deletedAt||(p.snoozeUntil&&p.snoozeUntil>today())).filter(p=>historyFilter==='all'||historyFilter==='trash'&&p.deletedAt||historyFilter==='legacy'&&p.retired||historyFilter===p.outcome||historyFilter==='snoozed'&&p.snoozeUntil&&p.snoozeUntil>today());
@@ -141,6 +141,7 @@ async function openVault(key,create=false,remember=false){
   localLegacy=await readLegacyLocal();
   const pending=migrateLegacy(localLegacy,state);
   if(pending.addedPipes){await save(pending.operations);notify(`${pending.addedPipes} pipes preservados e vinculados aos clientes. Originais mantidos.`);}
+  const weekend=weekendFixOperations(state);if(weekend.length){await save(weekend);notify(weekend.length>1?`${weekend.length} pipes que estavam em fim de semana foram para segunda-feira.`:'1 pipe que estava em fim de semana foi para segunda-feira.');}
   // The old application is never written to. Its cloud code is only read by explicit migration.
 }
 async function save(ops){const list=Array.isArray(ops)?ops:[ops];if(demo){state=applyOperations(state,list);render();return;}await store.commit(list);}
@@ -195,7 +196,7 @@ const NEXT_ACTIONS=['Enviar proposta','Marcar reunião','Ligar para o cliente','
 const ALLOC_OPTS=['RF','RV','Recorrentes','COE','Previdência','Fundos'];
 const valueRange=cat=>cat==='seg'?[3000,5000,10000,15000,20000,30000,50000]:cat==='con'?[100000,150000,200000,300000,500000,750000,1000000,1500000,2000000]:cat==='cap'?[50000,100000,150000,200000,300000,500000,750000,1000000,2000000]:[30000,50000,100000,150000,200000,300000,500000,1000000];
 const addDays=(n,from=today())=>{const d=new Date(from+'T12:00:00');d.setDate(d.getDate()+n);return isoDate(d);};
-const datePreset=k=>{const d=new Date(today()+'T12:00:00');if(k==='tomorrow')d.setDate(d.getDate()+1);else if(k==='friday'){d.setDate(d.getDate()+((5-d.getDay()+7)%7||7));}else if(k==='monday'){d.setDate(d.getDate()+((1-d.getDay()+7)%7||7));}else if(k==='week')d.setDate(d.getDate()+7);else if(k==='eom')d.setDate(new Date(d.getFullYear(),d.getMonth()+1,0).getDate());else if(k==='month')d.setMonth(d.getMonth()+1);return isoDate(d);};
+const datePreset=k=>{const d=new Date(today()+'T12:00:00');if(k==='tomorrow')d.setDate(d.getDate()+1);else if(k==='friday'){d.setDate(d.getDate()+((5-d.getDay()+7)%7||7));}else if(k==='monday'){d.setDate(d.getDate()+((1-d.getDay()+7)%7||7));}else if(k==='week')d.setDate(d.getDate()+7);else if(k==='eom')d.setDate(new Date(d.getFullYear(),d.getMonth()+1,0).getDate());else if(k==='month')d.setMonth(d.getMonth()+1);return businessDay(isoDate(d),k==='eom');};
 const chipRadio=(name,options,current,extra='')=>`<div class="chips chips-radio" ${extra}>${options.map(o=>{const v=typeof o==='string'?o:o.id,t=typeof o==='string'?o:o.name,color=typeof o==='string'?'':(o.color||'');return `<label class="chip-check"><input type="radio" name="${name}" value="${esc(v)}" ${v===current?'checked':''}><span>${color?`<i class="dot" style="color:${color}"></i>`:''}${esc(t)}</span></label>`;}).join('')}</div>`;
 const notaPicker=cur=>`<div class="nota-picker" role="radiogroup" aria-label="Prioridade de 0 a 10">${Array.from({length:11},(_,i)=>`<label class="nota-dot rank-${rank(i)} ${i===cur?'on':''}"><input type="radio" name="nota" value="${i}" ${i===cur?'checked':''}><span>${i}</span></label>`).join('')}<b class="nota-label" data-nota-label>${cur>=8?'A · Quente':cur>=5?'B · Morno':'C · Frio'}</b></div>`;
 function editPipe(id=null,cat='cap',forClient=null){
@@ -218,10 +219,10 @@ ${p.snoozeUntil?`<div class="field full"><p class="muted small">Adiado até ${da
 ${id?`<div class="field full"><p class="muted small">${p.retired?'Registro legado preservado. Escolha uma das quatro categorias para reativá-lo.':''}${p.outcome?'Resultado: '+esc(p.outcome):''}${p.deletedAt?' · Este pipe está na lixeira.':''}</p></div>`:''}</div>`;
   showModal(id?'Detalhes da oportunidade':'Nova oportunidade',body,async f=>{
     const target=id||uid(),{client,ops,created}=resolveClient(f),nextCat=f.get('cat');const val=Number(f.get('value')),nota=Number(f.get('nota'));if(!Number.isFinite(val)||val<0)throw Error('Escolha ou digite o valor.');if(!(nota>=0&&nota<=10))throw Error('Escolha a prioridade.');
-    const data={id:target,clientId:client.id,client:client.name,title:String(f.get('title')||'').trim(),cat:nextCat,value:val,stage:f.get('stage'),date:f.get('date'),subtype:nextCat==='cap'?f.get('subtype'):'',origin:nextCat==='cap'?f.get('origin'):'',nota,next:String(f.get('next')||'').trim(),notes:f.get('notes'),alloc:nextCat==='ag'?f.getAll('alloc'):[],snoozeUntil:p.snoozeUntil||null,retired:!CATEGORIES.some(c=>c.id===nextCat),createdAt:p.createdAt||new Date().toISOString()};
+    const rawDate=f.get('date'),data={id:target,clientId:client.id,client:client.name,title:String(f.get('title')||'').trim(),cat:nextCat,value:val,stage:f.get('stage'),date:businessDay(rawDate),subtype:nextCat==='cap'?f.get('subtype'):'',origin:nextCat==='cap'?f.get('origin'):'',nota,next:String(f.get('next')||'').trim(),notes:f.get('notes'),alloc:nextCat==='ag'?f.getAll('alloc'):[],snoozeUntil:p.snoozeUntil||null,retired:!CATEGORIES.some(c=>c.id===nextCat),createdAt:p.createdAt||new Date().toISOString()};
     const linked=pipeAssetOperations({...p,...data},state,today());
-    await save([...ops,patch('pipes',target,data),...linked]);notify(created?`Oportunidade salva. Cliente ${client.name} criado no cadastro.`:linked.length?'Oportunidade salva. Carteira do cliente atualizada.':'Oportunidade salva.');
-  },'Salvar pipe',id?`<button type="button" class="btn danger" data-action="pipe-actions" data-id="${esc(id)}">Mover / adiar / concluir</button>`:'');
+    await save([...ops,patch('pipes',target,data),...linked]);notify((created?`Oportunidade salva. Cliente ${client.name} criado no cadastro.`:linked.length?'Oportunidade salva. Carteira do cliente atualizada.':'Oportunidade salva.')+(isWeekend(rawDate)?` Data movida para ${dateLabel(data.date)}, dia útil.`:''));
+  },'Salvar pipe',id?`<button type="button" class="btn" data-action="open-pipe-client" data-id="${esc(linkedId)}">Ver cliente</button><button type="button" class="btn danger" data-action="pipe-actions" data-id="${esc(id)}">Mover / adiar / concluir</button>`:'');
   const form=$('#modalForm');
   form.addEventListener('change',e=>{if(e.target.name==='cat'){const c=e.target.value;form.querySelectorAll('[data-only-cat]').forEach(el=>el.hidden=el.dataset.onlyCat!==c);const box=form.querySelector('[data-value-presets]');box.innerHTML=valueRange(c).map(v=>`<button type="button" class="chip-btn" data-set-value="${v}">${shortMoney(v)}</button>`).join('');}
     if(e.target.name==='nota'){const n=+e.target.value;form.querySelectorAll('.nota-dot').forEach(d=>d.classList.toggle('on',+d.querySelector('input').value===n));form.querySelector('[data-nota-label]').textContent=n>=8?'A · Quente':n>=5?'B · Morno':'C · Frio';}});
@@ -311,11 +312,11 @@ function snoozeDialog(id){const p=state.pipes[id];if(!p)return;
 async function movePipe(id,destination,closedDate=today(),order){
   const p=state.pipes[id];if(!p)return;
   if(destination==='snooze'){snoozeDialog(id);return;}
-  const keys=['cat','deletedAt','outcome','closedAt','retired','order','snoozeUntil'];const previous=Object.fromEntries(keys.map(k=>[k,p[k]??null]));
+  const keys=['cat','deletedAt','outcome','closedAt','retired','order','snoozeUntil','date'];const previous=Object.fromEntries(keys.map(k=>[k,p[k]??null]));
   let changes,message;
   if(destination==='trash'){changes={deletedAt:new Date().toISOString()};message='Pipe movido para a lixeira.';}
   else if(destination==='won'||destination==='lost'){changes={outcome:destination==='won'?'Ganho':'Perdido',closedAt:(closedDate||today())+'T12:00:00',deletedAt:null,snoozeUntil:null};message=destination==='won'?'Negócio ganho. Meta atualizada.':'Marcado como perdido. Fica no histórico.';}
-  else if(['tomorrow','week','month'].includes(destination)){const until=datePreset(destination);changes={snoozeUntil:until};message=(destination==='tomorrow'?'Escondido até amanhã.':'Adiado até '+dateLabel(until)+'.');}
+  else if(['tomorrow','week','month'].includes(destination)){const until=datePreset(destination);changes={snoozeUntil:until,date:until};message=until===addDays(1)?'Adiado para amanhã.':'Adiado para '+dateLabel(until);}
   else {changes={cat:destination,outcome:null,closedAt:null,deletedAt:null,retired:false,snoozeUntil:null,...(order===undefined?{}:{order})};message='Pipe movido para '+cats(destination).name+'.';}
   await save([patch('pipes',id,changes),...pipeAssetOperations({...p,...changes},state,today())]);notify(message,()=>save([patch('pipes',id,previous),...pipeAssetOperations({...p,...previous},state,today())]));
 }
@@ -340,7 +341,7 @@ const actions={
   'demo':()=>{demo=true;state=demoData();screen='board';clientId=null;render();},'lock':lock,
   'cycle-theme':()=>{const i=THEMES.findIndex(t=>t[0]===theme);applyTheme(THEMES[(i+1)%THEMES.length][0]);render();notify('Tema '+THEMES.find(t=>t[0]===theme)[1]+'.');},
   'toggle-sidebar':()=>{sidebarCollapsed=!sidebarCollapsed;try{localStorage.setItem('ricoCRM.sidebar',sidebarCollapsed?'collapsed':'open');}catch{}render();},'create-vault':createVault,'close-modal':()=>dialog.close(),
-  'new-client':()=>editClient(),'edit-client':()=>editClient(clientId),'new-pipe':()=>editPipe(),'client-pipe':()=>editPipe(null,'cap',clientId),'back-clients':()=>{clientId=null;render();},
+  'open-pipe-client':el=>{if(!state.clients[el.dataset.id])return;dialog.close();clientId=el.dataset.id;screen='clients';detailTab='pipes';render();},'new-client':()=>editClient(),'edit-client':()=>editClient(clientId),'new-pipe':()=>editPipe(),'client-pipe':()=>editPipe(null,'cap',clientId),'back-clients':()=>{clientId=null;render();},
   'new-asset':()=>editAsset(),'edit-estimate':editEstimate,'edit-goals':editGoals,'edit-results':editResults,'show-key':showKey,'sync':async()=>{if(store){await store.sync();notify(syncStatus==='synced'?'Base sincronizada.':'Alterações preservadas no dispositivo. A conexão será tentada novamente.');}},
   'week-prev':()=>{weekOffset--;render();},'week-next':()=>{weekOffset++;render();},'week-today':()=>{weekOffset=0;render();},
   'export':()=>{download({...state,exportedAt:new Date().toISOString()},'rico-clientes-'+today()+'.json');notify('Cópia completa exportada.');},
@@ -353,7 +354,8 @@ const actions={
   'remove-asset':async el=>{const id=el.dataset.id,old=state.assets[id];const gone={deletedAt:new Date().toISOString()};await save([patch('assets',id,gone),...assetPipeOperations({...old,...gone},state,today())]);dialog.close();notify('Posição removida.',()=>save(patch('assets',id,{deletedAt:old.deletedAt||null})));}
 };
 document.addEventListener('click',async e=>{
-  const el=e.target.closest('button');if(!el)return;
+  const el=e.target.closest('button');
+  if(!el){const card=e.target.closest('.pipe-card[data-pipe]');if(card&&!drag&&!suppressGripClick&&!card.classList.contains('drag-ghost'))editPipe(card.dataset.pipe);return;}
   try{
     if(el.dataset.action){await actions[el.dataset.action]?.(el);return;}
     if(el.dataset.nav){screen=el.dataset.nav;clientId=null;search='';filter='all';clientPotential='all';render();return;}
@@ -380,16 +382,27 @@ let searchTimer;document.addEventListener('input',e=>{if(e.target.id==='search')
 document.addEventListener('focusin',e=>{if(e.target.id==='clientQuery')clientSuggest(e.target);});
 document.addEventListener('change',async e=>{const el=e.target;if(el.id==='goalMonth'&&el.value){month=el.value;render();}if(el.name==='institution'&&el.closest('#estimateForm'))loadEstimate();if(el.id==='backupFile'&&el.files[0]){if(demo){notify('Abra sua base para importar dados reais.');return;}try{if(el.files[0].size>4000000)throw Error('Arquivo muito grande para esta base.');await importSource(JSON.parse(await el.files[0].text()));}catch(err){notify(err.message);}finally{el.value='';}}});
 let suppressGripClick=false;
-function startDrag(e){const grip=e.target.closest('[data-drag]');if(!grip||e.button!==0||e.isPrimary===false)return;
-  drag={id:grip.dataset.drag,pointerId:e.pointerId,grip,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false,target:null,frame:null};
-  grip.setPointerCapture(e.pointerId);
+// Arrastar: pela alça na hora; pelo corpo do card com toque longo (dedo) ou movendo (mouse). Toque rápido abre o pipe.
+const HOLD_MS=260;
+function startDrag(e){if(e.button!==0||e.isPrimary===false||drag)return;
+  const grip=e.target.closest('[data-drag]');
+  if(grip){drag={id:grip.dataset.drag,pointerId:e.pointerId,grip,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false,target:null,frame:null};grip.setPointerCapture(e.pointerId);return;}
+  const card=e.target.closest('[data-card-drag]');if(!card||e.target.closest('button,a,input,select,textarea'))return;
+  const g=card.querySelector('[data-drag]');
+  drag={id:card.dataset.cardDrag,pointerId:e.pointerId,grip:g,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false,target:null,frame:null,hold:e.pointerType!=='mouse'};
+  if(drag.hold){card.classList.add('holding');drag.holdCard=card;drag.timer=setTimeout(()=>{if(!drag||drag.active)return;card.classList.remove('holding');try{g.setPointerCapture(drag.pointerId);}catch{}navigator.vibrate?.(12);activateDrag();},HOLD_MS);}
 }
+// iPad: depois do toque longo, o dedo arrasta o pipe em vez de rolar a coluna.
+document.addEventListener('touchmove',e=>{if(drag?.active)e.preventDefault();},{passive:false});
 // O fantasma nasce exatamente sobre o card (mesmo tamanho e ponto de toque) e segue o dedo por transform, sem relayout.
-function activateDrag(){if(!drag||drag.active)return;drag.active=true;document.body.classList.add('dragging');const card=drag.grip.closest('.pipe-card');drag.card=card;const r=card.getBoundingClientRect();drag.offsetX=drag.startX-r.left;drag.offsetY=drag.startY-r.top;drag.w=r.width;drag.gx=r.left;drag.gy=r.top;
+function activateDrag(){if(!drag||drag.active)return;drag.active=true;try{if(!drag.grip.hasPointerCapture(drag.pointerId))drag.grip.setPointerCapture(drag.pointerId);}catch{}document.body.classList.add('dragging');const card=drag.grip.closest('.pipe-card');drag.card=card;const r=card.getBoundingClientRect();drag.offsetX=drag.startX-r.left;drag.offsetY=drag.startY-r.top;drag.w=r.width;drag.gx=r.left;drag.gy=r.top;
   const ghost=card.cloneNode(true);ghost.classList.add('drag-ghost');ghost.removeAttribute('data-pipe');ghost.querySelectorAll('button').forEach(b=>b.tabIndex=-1);ghost.setAttribute('aria-hidden','true');ghost.style.width=r.width+'px';ghost.style.transform=`translate3d(${r.left}px,${r.top}px,0)`;document.body.append(ghost);drag.ghost=ghost;requestAnimationFrame(()=>ghost.classList.add('lifted'));
   card.classList.add('drag-source');card.style.height=r.height+'px';
   const targets=$('#dragTargets');targets.innerHTML=MOVE_OPTIONS.map(([k,t,i])=>`<div class="drop-target ${k}" data-drop="${k}">${icon(i)}<span>${t}</span></div>`).join('');targets.classList.add('show');targets.setAttribute('aria-hidden','false');$('#dragLive').textContent='Arrastando. Escolha uma categoria, Ganho ou Lixeira.';dragTick();}
-function updateDrag(e){if(!drag||e.pointerId!==drag.pointerId)return;drag.x=e.clientX;drag.y=e.clientY;if(!drag.active&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>5)activateDrag();if(drag.active)e.preventDefault();}
+function cancelHold(){if(!drag)return;clearTimeout(drag.timer);drag.holdCard?.classList.remove('holding');drag=null;}
+function updateDrag(e){if(!drag||e.pointerId!==drag.pointerId)return;drag.x=e.clientX;drag.y=e.clientY;const moved=Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY);
+  if(!drag.active&&drag.hold){if(moved>8)cancelHold();return;}
+  if(!drag.active&&moved>5)activateDrag();if(drag?.active)e.preventDefault();}
 function dragTick(){if(!drag?.active)return;const d=drag;
   // Suaviza o deslocamento: o fantasma persegue o ponteiro com leve inércia.
   const tx=d.x-d.offsetX,ty=d.y-d.offsetY;d.gx+=(tx-d.gx)*0.55;d.gy+=(ty-d.gy)*0.55;const vx=Math.max(-1,Math.min(1,(tx-d.gx)/40));d.ghost.style.transform=`translate3d(${d.gx}px,${d.gy}px,0) rotate(${(-1.5+vx*3).toFixed(2)}deg) scale(1.03)`;
@@ -398,7 +411,7 @@ function dragTick(){if(!drag?.active)return;const d=drag;
     const col=under?.closest('.column')?.querySelector('.column-body');if(col){const r=col.getBoundingClientRect();if(d.y>r.bottom-60)col.scrollTop+=Math.min(14,(d.y-(r.bottom-60))/4);else if(d.y<r.top+60)col.scrollTop-=Math.min(14,((r.top+60)-d.y)/4);}}
   d.frame=requestAnimationFrame(dragTick);
 }
-async function endDrag(cancelled=false){if(!drag)return;const d=drag;drag=null;cancelAnimationFrame(d.frame);try{if(d.grip.hasPointerCapture(d.pointerId))d.grip.releasePointerCapture(d.pointerId);}catch{}
+async function endDrag(cancelled=false){if(!drag)return;if(!drag.active){cancelHold();return;}const d=drag;drag=null;cancelAnimationFrame(d.frame);try{if(d.grip.hasPointerCapture(d.pointerId))d.grip.releasePointerCapture(d.pointerId);}catch{}
   const dropped=d.active&&!cancelled&&d.target;
   if(d.ghost){const g=d.ghost;if(dropped){const r=d.target.getBoundingClientRect();g.classList.add('dropping');g.style.transform=`translate3d(${r.left+r.width/2-d.w/2}px,${r.top+r.height/2-40}px,0) scale(.6)`;}else if(d.card&&d.active){const r=d.card.getBoundingClientRect();g.classList.add('returning');g.style.transform=`translate3d(${r.left}px,${r.top}px,0)`;}
     setTimeout(()=>g.remove(),dropped?180:220);}
