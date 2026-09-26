@@ -1572,20 +1572,13 @@ h3 {
 .drag-targets {
   display: none;
   position: fixed;
-  position: re  bottom: 16px;
-  right: 16px;lative;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  background: var(--panel-raised);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  bottom: 16px;
+  right: 16px;
   left: calc(var(--sidebar-w, 224px) + 16px);
   z-index: 1001;
-  gap: 6px;
+  gap: 8px;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   pointer-events: none;
 }
 .drag-targets.show {
@@ -1608,14 +1601,16 @@ h3 {
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   border: 1px dashed var(--border-strong);
-  border-radius: 14px;
-  min-height: 50px;
+  border-radius: 16px;
+  min-height: 92px;
   min-width: 0;
-  padding: 8px 12px;
-  font-size: 12px;
+  flex: 1 1 0;
+  padding: 12px 10px;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 8px;
   align-items: center;
   justify-content: center;
@@ -1626,6 +1621,8 @@ h3 {
   transition: transform 0.15s, background 0.15s, border-color 0.15s;
 }
 .drop-target svg {
+  width: 26px;
+  height: 26px;
   color: var(--cat, var(--text));
 }
 .drop-target.won {
@@ -2383,7 +2380,7 @@ h3 {
 /* Agenda */
 .week-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
   gap: 10px;
   overflow-x: auto;
 }
@@ -2518,7 +2515,7 @@ h3 {
 }
 .month-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   grid-template-rows: 20px;
   grid-auto-rows: minmax(0, 1fr);
   gap: 6px;
@@ -2528,7 +2525,7 @@ h3 {
   grid-row: auto;
   height: 20px;
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
 }
 .month-head span {
@@ -3072,7 +3069,7 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
   .week-grid {
-    grid-template-columns: repeat(7, 155px);
+    grid-template-columns: repeat(5, 170px);
   }
   .month-day {
     min-height: 96px;
@@ -3208,7 +3205,12 @@ dialog::backdrop {
   .drag-targets {
     left: 8px;
     right: 8px;
-    gap: 5px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .drop-target {
+    flex: 1 1 28%;
+    min-height: 70px;
   }
   .drag-hint {
     display: none;
