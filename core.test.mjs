@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -99,4 +99,19 @@ test('an estimated portfolio outside Rico keeps one captação pipe per institut
   const next=applyOperations(state,ops);
   assert.equal(estimatePipeOperations('c1','BTG',600000,next,'2026-09-22')[0].patch.value,600000);
   assert.deepEqual(estimatePipeOperations('c1','Rico',600000,next,'2026-09-22'),[]);
+});
+
+test('weekend dates roll to the next Monday and open pipes on weekends are fixed', () => {
+  assert.equal(businessDay('2026-09-26'),'2026-09-28');
+  assert.equal(businessDay('2026-09-27'),'2026-09-28');
+  assert.equal(businessDay('2026-09-25'),'2026-09-25');
+  assert.equal(businessDay('2026-10-31',true),'2026-10-30');
+  const state=emptyState();
+  state.pipes.a={id:'a',cat:'cap',date:'2026-09-26',value:1};
+  state.pipes.b={id:'b',cat:'cap',date:'2026-09-25',snoozeUntil:'2026-09-27',value:1};
+  state.pipes.c={id:'c',cat:'cap',date:'2026-09-26',outcome:'Ganho',value:1};
+  const ops=weekendFixOperations(state);
+  assert.equal(ops.length,2);
+  const next=applyOperations(state,ops);
+  assert.equal(next.pipes.a.date,'2026-09-28');assert.equal(next.pipes.b.snoozeUntil,'2026-09-28');assert.equal(next.pipes.b.date,'2026-09-25');assert.equal(next.pipes.c.date,'2026-09-26');
 });
