@@ -341,6 +341,9 @@ export function custodyOperations(source,state,stamp=new Date().toISOString()){
     const left=g.values.filter((v,i)=>!usedV.has(i)).reduce((a,b)=>a+b,0);let first=true;
     for(const c of cands)if(assign.has(c.id)){setCustody(c,assign.get(c.id)+(first?left:0));first=false;}
   }
+  // Distribuição da carteira do Hub (D-3): só percentuais agregados por classe, para o painel da lista.
+  if(Array.isArray(source.mix)&&source.mix.length){const items=source.mix.filter(m=>m&&m.name&&Number(m.pct)>0).map(m=>({name:String(m.name),pct:Number(m.pct),color:/^#[0-9a-f]{6}$/i.test(m.color||'')?m.color:''}));
+    if(items.length)ops.push({type:'settings',id:'hubMix',patch:{asOf:source.mixAsOf||asOf,label:source.mixLabel||'D-3',items,total:cents(source.rows.reduce((n,r)=>n+(Number(r?.value)||0),0))}});}
   ops.summary={people:groups.size,created,renamed,updated:[...touched].filter(id=>!id.startsWith('hub-')||Object.hasOwn(state.clients,id)).length,total:cents([...groups.values()].reduce((n,g)=>n+g.values.reduce((a,b)=>a+b,0),0))};
   return ops;
 }

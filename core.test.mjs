@@ -159,4 +159,7 @@ test('Hub custody updates Rico custody by name, keeps duplicates and adds missin
   const again=custodyOperations(src,next,'2026-09-28T13:00:00Z');
   assert.equal(again.filter(o=>o.type==='clients').length,0);assert.equal(again.summary.created,0);
   assert.equal(applyOperations(next,again).assets.an.value,250.5);
+  const withMix=custodyOperations({...src,mix:[{name:'Ações',pct:60,color:'#f6c000'},{name:'Renda Fixa',pct:40,color:'bad'},{name:'Zero',pct:0}]},state,'2026-09-28T12:00:00Z');
+  const mix=applyOperations(state,withMix).settings.hubMix;
+  assert.equal(mix.items.length,2);assert.equal(mix.items[1].color,'');assert.equal(mix.total,1537.5);assert.equal(mix.label,'D-3');
 });
