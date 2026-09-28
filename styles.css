@@ -4058,3 +4058,66 @@ dialog::backdrop {
   transform: rotate(180deg);
   align-self: center;
 }
+
+/* ---- Quinta coluna: pós-venda ----------------------------------------------------------------- */
+.board.has-pv {
+  grid-template-columns: repeat(5, minmax(176px, 1fr));
+}
+.column[data-drop="pv"] {
+  background: rgba(255, 143, 177, 0.06);
+  border-color: rgba(255, 143, 177, 0.22);
+}
+.card-value.sold {
+  font-size: 15px;
+  color: #ff8fb1;
+}
+.card-value.sold small {
+  font: 500 11px var(--body);
+  color: var(--muted);
+}
+@media (max-width: 950px) {
+  .board.has-pv {
+    grid-template-columns: repeat(5, 230px);
+  }
+}
+@media (max-width: 650px) {
+  .board.has-pv {
+    grid-template-columns: repeat(5, 267px);
+  }
+}
+.card-value.sold small {
+  display: block;
+  margin-top: 2px;
+}
+.pipe-card .card-client > .tier-letter {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  align-self: center;
+}
+/* Cinco colunas lado a lado no iPad: cartões um pouco mais enxutos */
+.board.has-pv {
+  gap: 10px;
+}
+.board.has-pv .column {
+  padding: 10px 7px 6px;
+}
+.board.has-pv .column-head h3 {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.board.has-pv .grip {
+  width: 22px;
+}
+.board.has-pv .card-content {
+  padding: 12px 10px 12px 28px;
+}
+.board.has-pv .card-value {
+  font-size: 18px;
+}
+.board.has-pv .card-value.sold {
+  font-size: 15px;
+}
+.board.has-pv .card-client {
+  gap: 6px;
+}

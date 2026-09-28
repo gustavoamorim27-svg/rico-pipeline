@@ -266,7 +266,7 @@ export const TIERS=[
 ];
 export const tierOf=id=>TIERS.find(t=>t.id===id)||null;
 // Pipes que o próprio app cria (a partir de potencial, carteira ou estimativa) não significam que houve conversa.
-export const isAutoPipe=p=>!!(p&&(p.fromPotential||p.fromAsset||p.fromEstimate));
+export const isAutoPipe=p=>!!(p&&(p.fromPotential||p.fromAsset||p.fromEstimate||p.fromWon));
 export const hadConversation=(state,clientId)=>Object.values(state.pipes||{}).some(p=>p.clientId===clientId&&!isAutoPipe(p));
 // Classes: A = muito próximo (escolha sua, nunca muda sozinha); B = já fez negócio (algum pipe ganho);
 // C = já teve pipe registrado; D = ainda não interagimos. A classe só sobe sozinha, nunca é rebaixada.
@@ -292,6 +292,7 @@ export function pipeStats(state,todayIso){
   const s={won:0,lost:0,open:0,overdue:0,snoozed:0,trash:0,wonValue:0,lostValue:0,openValue:0,overdueValue:0};
   for(const p of Object.values(state.pipes||{})){
     const v=Number(p.value)||0;
+    if(p.cat==='pv'&&p.outcome)continue;
     if(p.outcome==='Ganho'){s.won++;s.wonValue+=v;continue;}
     if(p.outcome==='Perdido'){s.lost++;s.lostValue+=v;continue;}
     if(p.deletedAt){s.trash++;continue;}
@@ -425,5 +426,27 @@ export function mergeClientOperations(state,keepId,dropIds,stamp=new Date().toIS
   const custody=assets.filter(a=>(a.clientId===keepId||dropSet.has(a.clientId))&&isRico(a.institution)&&a.name==='Custódia na Rico')
     .sort((a,b)=>String(b.asOf||'').localeCompare(String(a.asOf||''))||(b.clientId===keepId)-(a.clientId===keepId));
   for(const a of custody.slice(1))ops.push({type:'assets',id:a.id,patch:gone});
+  return ops;
+}
+
+// ---- Pós-venda: todo negócio ganho vira um pipe de acompanhamento no dia 1 do mês seguinte -------
+export const POST_SALE={id:'pv',name:'Pós-venda',color:'#ff8fb1',soft:'rgba(255,143,177,.16)',icon:'check'};
+export const postSaleId=pipeId=>`pv-${pipeId}`;
+export const firstOfNextMonth=iso=>{const d=new Date(String(iso).slice(0,10)+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()+1);return isoOf(d);};
+const SOLD_NAME={cap:'Captação',ag:'Alocação',seg:'Seguros',con:'Consórcio',rv:'Renda variável'};
+// Data: primeiro dia útil do mês seguinte ao fechamento; se já passou, o próximo dia útil a partir de hoje.
+// Se o ganho for desfeito, o pós-venda que o app criou (e ainda não foi tocado) sai do quadro.
+export function postSaleOperations(state,todayIso,stamp=new Date().toISOString()){
+  const ops=[];
+  for(const p of Object.values(state.pipes||{})){
+    if(!p||p.cat==='pv'||p.fromWon)continue;
+    const id=postSaleId(p.id),cur=state.pipes[id],won=p.outcome==='Ganho'&&!p.deletedAt;
+    if(!won){if(cur&&!cur.deletedAt&&!cur.outcome)ops.push({type:'pipes',id,patch:{deletedAt:stamp,autoRemoved:true,updatedAt:stamp}});continue;}
+    if(cur&&!(cur.deletedAt&&cur.autoRemoved))continue;
+    const sold=String(p.closedAt||p.date||todayIso).slice(0,10);
+    let date=businessDay(firstOfNextMonth(sold));if(date<todayIso)date=businessDay(todayIso);
+    if(cur){ops.push({type:'pipes',id,patch:{deletedAt:null,autoRemoved:false,date,soldAt:sold,soldValue:Number(p.value)||0,updatedAt:stamp}});continue;}
+    ops.push({type:'pipes',id,patch:{id,clientId:p.clientId,client:p.client||state.clients?.[p.clientId]?.name||'',title:`Pós-venda · ${p.title||p.subtype||SOLD_NAME[p.cat]||'negócio'}`,cat:'pv',value:0,soldValue:Number(p.value)||0,soldCat:p.cat,soldAt:sold,stage:STAGES[0],date,subtype:'',origin:'',nota:5,next:'Ligar para acompanhar o pós-venda',notes:'',alloc:[],snoozeUntil:null,retired:false,fromWon:p.id,createdAt:stamp,updatedAt:stamp}});
+  }
   return ops;
 }
