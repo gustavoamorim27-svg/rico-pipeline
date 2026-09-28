@@ -347,3 +347,74 @@ export function custodyOperations(source,state,stamp=new Date().toISOString()){
   ops.summary={people:groups.size,created,renamed,updated:[...touched].filter(id=>!id.startsWith('hub-')||Object.hasOwn(state.clients,id)).length,total:cents([...groups.values()].reduce((n,g)=>n+g.values.reduce((a,b)=>a+b,0),0))};
   return ops;
 }
+
+// ---- Nomes muito parecidos: a mesma pessoa cadastrada mais de uma vez --------------------------
+// "Alberto Willy" e "Alberto Willy Bernardi": mesmo primeiro nome e todas as palavras do nome curto,
+// na ordem, dentro do nome longo. Se o nome curto couber em duas pessoas diferentes, não sugere nada.
+// Cadastros "· conta N" são contas separadas de propósito e ficam de fora.
+const sigWords=name=>nameKey(name).split(' ').filter(w=>w&&!PARTICLES.has(w));
+const inOrder=(s,l)=>{let i=0;for(const w of l)if(w===s[i])i++;return i===s.length;};
+const hasAccent=s=>/[À-ſ]/.test(String(s||''));
+export const mergeKey=ids=>[...ids].sort().join('+');
+export function similarClientGroups(state){
+  const list=values(state,'clients').filter(c=>!/·\s*conta\b/i.test(c.name||'')).map(c=>({c,w:sigWords(c.name)})).filter(x=>x.w.length>=2);
+  const key=x=>x.w.join(' '),covers=(a,b)=>a!==b&&a.w[0]===b.w[0]&&a.w.length<b.w.length&&inOrder(a.w,b.w);
+  const up=new Map(list.map(x=>[x.c.id,x.c.id])),find=id=>{while(up.get(id)!==id)id=up.get(id);return id;},join=(a,b)=>up.set(find(a),find(b));
+  const byKey=new Map();for(const x of list){const k=key(x);if(byKey.has(k))join(x.c.id,byKey.get(k).c.id);else byKey.set(k,x);}
+  const byFirst=new Map();for(const x of list){if(!byFirst.has(x.w[0]))byFirst.set(x.w[0],[]);byFirst.get(x.w[0]).push(x);}
+  for(const a of list){
+    const cands=byFirst.get(a.w[0]).filter(b=>covers(a,b));if(!cands.length)continue;
+    const top=cands.filter(b=>!cands.some(o=>covers(b,o)));
+    if(new Set(top.map(key)).size===1)join(a.c.id,top[0].c.id);
+  }
+  const groups=new Map();for(const x of list){const r=find(x.c.id);if(!groups.has(r))groups.set(r,[]);groups.get(r).push(x);}
+  const pipes=values(state,'pipes'),count=id=>pipes.filter(p=>p.clientId===id).length,ignore=state.settings?.mergeIgnore||{};
+  const out=[];
+  for(const g of groups.values()){if(g.length<2)continue;
+    g.sort((a,b)=>b.w.length-a.w.length||hasAccent(b.c.name)-hasAccent(a.c.name)||b.c.name.length-a.c.name.length||count(b.c.id)-count(a.c.id)||String(a.c.createdAt||'').localeCompare(String(b.c.createdAt||'')));
+    const ids=g.map(x=>x.c.id),k=mergeKey(ids);if(ignore[k])continue;
+    out.push({key:k,keep:ids[0],drop:ids.slice(1)});
+  }
+  return out.sort((a,b)=>state.clients[a.keep].name.localeCompare(state.clients[b.keep].name,'pt-BR'));
+}
+// Une os cadastros no mais completo: pipes e carteira passam para ele, campos vazios são completados,
+// fica a melhor classe e só a custódia na Rico mais recente. Os outros vão para a lixeira com "mergedInto".
+export function mergeClientOperations(state,keepId,dropIds,stamp=new Date().toISOString()){
+  const keep=state.clients[keepId];if(!keep)return [];
+  const drops=dropIds.filter(id=>id!==keepId&&state.clients[id]&&!state.clients[id].deletedAt),dropSet=new Set(drops);if(!drops.length)return [];
+  const ops=[],fill={},cur={...keep},rank=t=>{const i=['A','B','C','D'].indexOf(t);return i<0?9:i;};
+  // Acentos que só o nome curto tinha ("João") voltam para o nome completo ("Joao Silva Santos").
+  const accented=new Map();for(const id of drops)for(const w of String(state.clients[id].name).split(/\s+/))if(hasAccent(w))accented.set(nameKey(w),w.toLowerCase());
+  const name=String(keep.name).split(/\s+/).map(w=>{const m=accented.get(nameKey(w));return m&&!hasAccent(w)?(w[0]===w[0].toUpperCase()?m.charAt(0).toUpperCase()+m.slice(1):m):w;}).join(' ');
+  if(name!==keep.name)fill.name=name;
+  for(const id of drops){const d=state.clients[id];
+    for(const [k,v] of Object.entries(d)){if(['id','name','createdAt','updatedAt','deletedAt','mergedInto','mergedFrom','tier','potentials','notes'].includes(k))continue;if(emptyValue(cur[k])&&!emptyValue(v)){fill[k]=v;cur[k]=v;}}
+    if(d.notes&&!(cur.notes||'').includes(d.notes)){cur.notes=cur.notes?cur.notes+'\n'+d.notes:d.notes;fill.notes=cur.notes;}
+    const have=cur.potentials||{},pot={...(d.potentials||{}),...Object.fromEntries(Object.entries(have).filter(([,x])=>x&&x!=='A mapear'))};
+    if(JSON.stringify(pot)!==JSON.stringify(have)){fill.potentials=pot;cur.potentials=pot;}
+    if(rank(d.tier)<rank(cur.tier)){fill.tier=d.tier;cur.tier=d.tier;}
+    ops.push({type:'clients',id,patch:{deletedAt:stamp,mergedInto:keepId,updatedAt:stamp}});
+  }
+  ops.push({type:'clients',id:keepId,patch:{...fill,mergedFrom:[...(keep.mergedFrom||[]),...drops],updatedAt:stamp}});
+  const finalName=fill.name||keep.name,open=p=>!p.outcome&&!p.retired,norm=s=>String(s||'').trim().toLowerCase(),gone={deletedAt:stamp,updatedAt:stamp};
+  const pipes=Object.values(state.pipes).filter(p=>!p.deletedAt),mine=pipes.filter(p=>p.clientId===keepId);
+  for(const p of mine)if(p.client!==finalName)ops.push({type:'pipes',id:p.id,patch:{client:finalName}});
+  for(const p of pipes.filter(p=>dropSet.has(p.clientId))){
+    if(open(p)&&p.fromPotential&&mine.some(q=>open(q)&&q.cat===p.cat)){ops.push({type:'pipes',id:p.id,patch:gone});continue;}
+    if(p.fromEstimate){
+      if(open(p)&&mine.some(q=>open(q)&&q.fromEstimate&&norm(q.origin)===norm(p.origin))){ops.push({type:'pipes',id:p.id,patch:gone});continue;}
+      const id=estimatePipeId(keepId,p.origin);
+      if(!state.pipes[id]){const copy={...p,id,clientId:keepId,client:finalName,updatedAt:stamp};ops.push({type:'pipes',id,patch:copy},{type:'pipes',id:p.id,patch:gone});mine.push(copy);continue;}
+    }
+    ops.push({type:'pipes',id:p.id,patch:{clientId:keepId,client:finalName,updatedAt:stamp}});mine.push({...p,clientId:keepId});
+  }
+  const assets=Object.values(state.assets).filter(a=>!a.deletedAt),keepAssets=assets.filter(a=>a.clientId===keepId);
+  for(const a of assets.filter(a=>dropSet.has(a.clientId))){
+    if(a.estimated&&keepAssets.some(b=>b.estimated&&norm(b.institution)===norm(a.institution))){ops.push({type:'assets',id:a.id,patch:gone});continue;}
+    ops.push({type:'assets',id:a.id,patch:{clientId:keepId,updatedAt:stamp}});
+  }
+  const custody=assets.filter(a=>(a.clientId===keepId||dropSet.has(a.clientId))&&isRico(a.institution)&&a.name==='Custódia na Rico')
+    .sort((a,b)=>String(b.asOf||'').localeCompare(String(a.asOf||''))||(b.clientId===keepId)-(a.clientId===keepId));
+  for(const a of custody.slice(1))ops.push({type:'assets',id:a.id,patch:gone});
+  return ops;
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -162,4 +162,38 @@ test('Hub custody updates Rico custody by name, keeps duplicates and adds missin
   const withMix=custodyOperations({...src,mix:[{name:'Ações',pct:60,color:'#f6c000'},{name:'Renda Fixa',pct:40,color:'bad'},{name:'Zero',pct:0}]},state,'2026-09-28T12:00:00Z');
   const mix=applyOperations(state,withMix).settings.hubMix;
   assert.equal(mix.items.length,2);assert.equal(mix.items[1].color,'');assert.equal(mix.total,1537.5);assert.equal(mix.label,'D-3');
+});
+
+test('very similar names are grouped, ambiguous or per-account names are not', () => {
+  const state=emptyState();const add=(id,name,extra={})=>state.clients[id]={id,name,...extra};
+  add('s','Alberto Willy',{tier:'B',createdAt:'2026-01-01'});add('s2','alberto  willy');add('l','ALBERTO WILLY BERNARDI'.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),{tier:'D'});
+  add('c1','Carlos Oliveira');add('c2','Carlos Henrique de Oliveira');add('c3','Carlos Roberto de Oliveira');
+  add('m1','Mirza Cunha · conta 1');add('m2','Mirza Cunha · conta 2');
+  add('j1','João Pedro');add('j2','Joao Pedro Mayrink de Jesus');
+  add('x','Maria Silva');add('y','Maria da Penha Silveira');add('one','Ana');add('one2','Ana Clara');
+  const g=similarClientGroups(state);
+  assert.deepEqual(g.map(x=>[x.keep,[...x.drop].sort()]),[['l',['s','s2']],['j2',['j1']]]);
+  state.settings.mergeIgnore={[g[1].key]:true};
+  assert.equal(similarClientGroups(state).length,1);
+});
+test('merging moves pipes and wallet, keeps the best class and only the newest Rico custody', () => {
+  const state=emptyState();
+  state.clients.s={id:'s',name:'João Willy',tier:'B',phone:'119',potentials:{seg:'Alto'},notes:'antigo'};
+  state.clients.l={id:'l',name:'Joao Willy Bernardi',tier:'D',potentials:{seg:'A mapear',con:'Médio'}};
+  state.pipes.p1={id:'p1',clientId:'s',client:'João Willy',cat:'cap',value:10};
+  state.pipes.p2={id:'p2',clientId:'s',cat:'seg',fromPotential:true};state.pipes.p3={id:'p3',clientId:'l',cat:'seg',value:5};
+  state.pipes['est-pipe-s-xp']={id:'est-pipe-s-xp',clientId:'s',cat:'cap',fromEstimate:true,origin:'XP',value:50};
+  state.assets.old={id:'old',clientId:'s',institution:'Rico',name:'Custódia na Rico',value:100,asOf:'2026-09-17'};
+  state.assets.hub={id:'hub',clientId:'l',institution:'Rico',name:'Custódia na Rico',value:120,asOf:'2026-09-28'};
+  state.assets.bb={id:'bb',clientId:'s',institution:'Banco do Brasil',name:'CDB',value:30};
+  const next=applyOperations(state,mergeClientOperations(state,'l',['s'],'2026-09-28T12:00:00Z'));
+  assert.equal(next.clients.s.deletedAt,'2026-09-28T12:00:00Z');assert.equal(next.clients.s.mergedInto,'l');
+  const l=next.clients.l;assert.equal(l.name,'João Willy Bernardi');assert.equal(l.tier,'B');assert.equal(l.phone,'119');assert.equal(l.notes,'antigo');
+  assert.deepEqual(l.potentials,{seg:'Alto',con:'Médio'});
+  assert.equal(next.pipes.p1.clientId,'l');assert.equal(next.pipes.p1.client,'João Willy Bernardi');
+  assert.ok(next.pipes.p2.deletedAt);assert.equal(next.pipes.p3.client,'João Willy Bernardi');
+  assert.ok(next.pipes['est-pipe-s-xp'].deletedAt);assert.equal(next.pipes['est-pipe-l-xp'].clientId,'l');assert.equal(next.pipes['est-pipe-l-xp'].value,50);
+  assert.ok(next.assets.old.deletedAt);assert.equal(next.assets.hub.deletedAt,undefined);assert.equal(next.assets.bb.clientId,'l');
+  const live=values(next,'clients');assert.equal(live.length,1);
+  assert.deepEqual(similarClientGroups(next),[]);
 });
