@@ -295,3 +295,52 @@ export function pipeStats(state,todayIso){
   s.conversion=decided?s.won/decided*100:null;s.valueConversion=decidedValue?s.wonValue/decidedValue*100:null;
   return s;
 }
+
+// ---- Patrimônio XP do Hub do Assessor ---------------------------------------------------------
+// Arquivo {kind:'rico-custody', asOf, rows:[{name,value}]}: só nome e patrimônio na Rico.
+// Casa por nome (sem acento, ignorando o sufixo " · conta N"), atualiza a custódia na Rico e acrescenta quem falta.
+// Nunca apaga nem funde clientes; contas da mesma pessoa somam no total dela.
+const nameKey=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s*·\s*conta\b.*$/,'').replace(/[^a-z0-9]+/g,' ').trim();
+const PARTICLES=new Set(['de','da','do','dos','das','e','di','del','della','y','van','von']);
+export const titleName=s=>String(s||'').trim().toLowerCase().split(/\s+/).map((w,i)=>i&&PARTICLES.has(w)?w:w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+const cents=n=>Math.round((Number(n)||0)*100)/100;
+export function custodyOperations(source,state,stamp=new Date().toISOString()){
+  if(source?.kind!=='rico-custody'||!Array.isArray(source.rows))throw Error('Arquivo de custódia inválido.');
+  const asOf=source.asOf||stamp.slice(0,10),clients=values(state,'clients'),assets=values(state,'assets');
+  const groups=new Map();
+  for(const r of source.rows){const k=nameKey(r?.name),v=cents(r?.value);if(!k||!(v>=0))continue;if(!groups.has(k))groups.set(k,{name:String(r.name),values:[]});groups.get(k).values.push(v);}
+  const hubKeys=[...groups.keys()],exactKeys=new Set(clients.map(c=>nameKey(c.name)).filter(k=>groups.has(k)));
+  const ops=[],touched=new Set();let created=0,renamed=0;
+  const ricoOf=id=>assets.filter(a=>a.clientId===id&&isRico(a.institution));
+  const note='Patrimônio XP (Hub do Assessor)';
+  const setCustody=(client,value)=>{
+    const rico=ricoOf(client.id),main=rico.find(a=>a.name==='Custódia na Rico');
+    const rest=cents(Math.max(0,value-rico.filter(a=>a!==main).reduce((n,a)=>n+(+a.value||0),0)));
+    if(main){if(cents(main.value)!==rest||main.asOf!==asOf){ops.push({type:'assets',id:main.id,patch:{value:rest,asOf,notes:note,updatedAt:stamp}});touched.add(client.id);}return;}
+    if(rest>0){const id=`hub-net-${client.id}`;ops.push({type:'assets',id,onlyIfAbsent:true,patch:{id,clientId:client.id,institution:'Rico',name:'Custódia na Rico',class:'Não informado',value:rest,asOf,notes:note,createdAt:stamp}});touched.add(client.id);}
+  };
+  for(const [k,g] of groups){
+    const sum=cents(g.values.reduce((a,b)=>a+b,0));
+    let cands=clients.filter(c=>nameKey(c.name)===k),fuller=false;
+    if(!cands.length){
+      const pre=clients.filter(c=>{const e=nameKey(c.name);return e.split(' ').length>=2&&!exactKeys.has(e)&&k.startsWith(e+' ')&&hubKeys.filter(h=>h.startsWith(e+' ')).length===1;});
+      if(pre.length===1){cands=pre;fuller=true;}
+    }
+    if(!cands.length){
+      const id=`hub-${stable(k)}`;if(Object.hasOwn(state.clients,id))continue;
+      const client={id,name:titleName(g.name),phone:'',email:'',profile:'Não informado',tier:'D',notes:'',likes:[],potentials:{},createdAt:stamp};
+      ops.push({type:'clients',id,onlyIfAbsent:true,patch:client});clients.push(client);created++;setCustody(client,sum);continue;
+    }
+    if(fuller){ops.push({type:'clients',id:cands[0].id,patch:{name:titleName(g.name),updatedAt:stamp}});renamed++;}
+    if(cands.length===1){setCustody(cands[0],sum);continue;}
+    // Mesma pessoa cadastrada mais de uma vez (uma por conta): cada conta do Hub vai para o cadastro de custódia mais próxima.
+    const held=c=>ricoOf(c.id).reduce((n,a)=>n+(+a.value||0),0),pairs=[];
+    for(const c of cands)g.values.forEach((v,i)=>pairs.push({c,i,d:Math.abs(held(c)-v)}));
+    pairs.sort((a,b)=>a.d-b.d);const usedV=new Set(),assign=new Map();
+    for(const p of pairs){if(assign.has(p.c.id)||usedV.has(p.i))continue;assign.set(p.c.id,g.values[p.i]);usedV.add(p.i);}
+    const left=g.values.filter((v,i)=>!usedV.has(i)).reduce((a,b)=>a+b,0);let first=true;
+    for(const c of cands)if(assign.has(c.id)){setCustody(c,assign.get(c.id)+(first?left:0));first=false;}
+  }
+  ops.summary={people:groups.size,created,renamed,updated:[...touched].filter(id=>!id.startsWith('hub-')||Object.hasOwn(state.clients,id)).length,total:cents([...groups.values()].reduce((n,g)=>n+g.values.reduce((a,b)=>a+b,0),0))};
+  return ops;
+}

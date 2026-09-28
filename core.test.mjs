@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -135,4 +135,28 @@ test('pipe stats count conversion, losses, overdue and snoozed pipes', () => {
   assert.equal(s.won,1);assert.equal(s.lost,2);assert.equal(Math.round(s.conversion),33);assert.equal(s.valueConversion,60);
   assert.equal(s.open,2);assert.equal(s.overdue,1);assert.equal(s.overdueValue,50);assert.equal(s.snoozed,1);assert.equal(s.trash,1);
   assert.equal(pipeStats(emptyState(),'2026-09-28').conversion,null);
+});
+
+test('Hub custody updates Rico custody by name, keeps duplicates and adds missing clients', () => {
+  const state=emptyState();
+  state.clients.a={id:'a',name:'João Silva',tier:'B'};
+  state.assets.an={id:'an',clientId:'a',institution:'Rico',name:'Custódia na Rico',value:100,asOf:'2026-01-01'};
+  state.clients.m1={id:'m1',name:'Mirza Cunha · conta 1',tier:'D'};state.clients.m2={id:'m2',name:'Mirza Cunha · conta 2',tier:'D'};
+  state.assets.m1n={id:'m1n',clientId:'m1',institution:'Rico',name:'Custódia na Rico',value:1000};state.assets.m2n={id:'m2n',clientId:'m2',institution:'Rico',name:'Custódia na Rico',value:10};
+  state.clients.s={id:'s',name:'Ana Paula',tier:'C'};
+  state.clients.d={id:'d',name:'Pedro Lima',tier:'D'};state.assets.dd={id:'dd',clientId:'d',institution:'Rico',name:'CDB Rico',value:30};
+  const src={kind:'rico-custody',asOf:'2026-09-28',rows:[{name:'JOAO SILVA',value:250.5},{name:'JOAO SILVA',value:0},{name:'MIRZA CUNHA',value:12},{name:'MIRZA CUNHA',value:1100},{name:'ANA PAULA SOUZA DOS SANTOS',value:70},{name:'PEDRO LIMA',value:100},{name:'NOVA PESSOA DE TAL',value:5}]};
+  const ops=custodyOperations(src,state,'2026-09-28T12:00:00Z');
+  const next=applyOperations(state,ops);
+  assert.equal(next.assets.an.value,250.5);assert.equal(next.assets.an.asOf,'2026-09-28');
+  assert.equal(next.assets.m1n.value,1100);assert.equal(next.assets.m2n.value,12);
+  assert.equal(next.clients.s.name,'Ana Paula Souza dos Santos');assert.equal(next.assets['hub-net-s'].value,70);
+  assert.equal(next.assets.dd.value,30);assert.equal(next.assets['hub-net-d'].value,70);
+  const added=Object.values(next.clients).filter(c=>c.id.startsWith('hub-'));
+  assert.equal(added.length,1);assert.equal(added[0].name,'Nova Pessoa de Tal');assert.equal(added[0].tier,'D');
+  assert.equal(Object.keys(next.clients).length,6);
+  assert.deepEqual({...ops.summary},{people:5,created:1,renamed:1,updated:5,total:1537.5});
+  const again=custodyOperations(src,next,'2026-09-28T13:00:00Z');
+  assert.equal(again.filter(o=>o.type==='clients').length,0);assert.equal(again.summary.created,0);
+  assert.equal(applyOperations(next,again).assets.an.value,250.5);
 });
