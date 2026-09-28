@@ -1,4 +1,4 @@
-const CACHE='rico-clientes-shell-v3-20260929-3';
+const CACHE='rico-clientes-shell-v3-20260929-4';
 const SHELL=['./','./index.html','./styles.css','./app.mjs','./core.mjs','./store.mjs','./logo.mjs','./manifest.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('rico-clientes-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
