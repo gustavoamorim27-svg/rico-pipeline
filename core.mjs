@@ -248,3 +248,50 @@ export function weekendFixOperations(state){
   }
   return ops;
 }
+
+// ---- Classificação do cliente (A–D) --------------------------------------------------------------
+// A: muito próximo · B: próximo · C: já conversamos (teve pipe) · D: a conhecer. Nenhum cliente fica sem classe.
+export const TIERS=[
+  {id:'A',name:'Muito próximo',color:'#ffb547'},
+  {id:'B',name:'Próximo',color:'#48d6a0'},
+  {id:'C',name:'Já conversamos',color:'#7199ff'},
+  {id:'D',name:'A conhecer',color:'#a79fc9'}
+];
+export const tierOf=id=>TIERS.find(t=>t.id===id)||null;
+// Pipes que o próprio app cria (a partir de potencial, carteira ou estimativa) não significam que houve conversa.
+export const isAutoPipe=p=>!!(p&&(p.fromPotential||p.fromAsset||p.fromEstimate));
+export const hadConversation=(state,clientId)=>Object.values(state.pipes||{}).some(p=>p.clientId===clientId&&!isAutoPipe(p));
+// Sem classe ou D com pipe no histórico -> C; sem classe e sem pipe -> D. A e B nunca são rebaixados.
+export function tierFixOperations(state){
+  const ops=[],stamp=new Date().toISOString(),talked=new Set(Object.values(state.pipes||{}).filter(p=>!isAutoPipe(p)).map(p=>p.clientId));
+  for(const c of Object.values(state.clients||{})){
+    if(c.deletedAt||['A','B','C'].includes(c.tier))continue;
+    const next=talked.has(c.id)?'C':'D';
+    if(c.tier!==next)ops.push({type:'clients',id:c.id,patch:{tier:next,updatedAt:stamp}});
+  }
+  return ops;
+}
+// Ao registrar um pipe, cliente D (ou sem classe) passa a C.
+export const tierAfterPipe=tier=>['A','B','C'].includes(tier)?tier:'C';
+export function tierStats(state){
+  const counts={A:0,B:0,C:0,D:0};let total=0;
+  for(const c of Object.values(state.clients||{})){if(c.deletedAt)continue;total++;counts[['A','B','C'].includes(c.tier)?c.tier:'D']++;}
+  return {total,counts,pct:Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,total?v/total*100:0]))};
+}
+// Desempenho dos pipes: conversão = ganhos ÷ (ganhos + perdidos).
+export function pipeStats(state,todayIso){
+  const s={won:0,lost:0,open:0,overdue:0,snoozed:0,trash:0,wonValue:0,lostValue:0,openValue:0,overdueValue:0};
+  for(const p of Object.values(state.pipes||{})){
+    const v=Number(p.value)||0;
+    if(p.outcome==='Ganho'){s.won++;s.wonValue+=v;continue;}
+    if(p.outcome==='Perdido'){s.lost++;s.lostValue+=v;continue;}
+    if(p.deletedAt){s.trash++;continue;}
+    if(p.retired)continue;
+    if(p.snoozeUntil&&p.snoozeUntil>todayIso){s.snoozed++;continue;}
+    s.open++;s.openValue+=v;
+    if(p.date&&p.date<todayIso){s.overdue++;s.overdueValue+=v;}
+  }
+  const decided=s.won+s.lost,decidedValue=s.wonValue+s.lostValue;
+  s.conversion=decided?s.won/decided*100:null;s.valueConversion=decidedValue?s.wonValue/decidedValue*100:null;
+  return s;
+}

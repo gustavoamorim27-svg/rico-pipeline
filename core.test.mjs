@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -114,4 +114,25 @@ test('weekend dates roll to the next Monday and open pipes on weekends are fixed
   assert.equal(ops.length,2);
   const next=applyOperations(state,ops);
   assert.equal(next.pipes.a.date,'2026-09-28');assert.equal(next.pipes.b.snoozeUntil,'2026-09-28');assert.equal(next.pipes.b.date,'2026-09-25');assert.equal(next.pipes.c.date,'2026-09-26');
+});
+
+test('clients who had a pipe become C, the rest D, and nobody stays without a class', () => {
+  const state=emptyState();
+  state.clients.a={id:'a',name:'A',tier:'A'};state.clients.b={id:'b',name:'B',tier:'D'};state.clients.c={id:'c',name:'C',tier:''};state.clients.d={id:'d',name:'D'};state.clients.e={id:'e',name:'E',tier:'D'};
+  state.pipes.p1={id:'p1',clientId:'a',cat:'cap'};state.pipes.p2={id:'p2',clientId:'b',cat:'cap',outcome:'Perdido'};state.pipes.p3={id:'p3',clientId:'c',cat:'seg',deletedAt:'x'};
+  state.pipes.p4={id:'p4',clientId:'e',cat:'seg',fromPotential:true};
+  const next=applyOperations(state,tierFixOperations(state));
+  assert.deepEqual(Object.fromEntries(Object.values(next.clients).map(c=>[c.id,c.tier])),{a:'A',b:'C',c:'C',d:'D',e:'D'});
+  assert.deepEqual(tierFixOperations(next),[]);
+  assert.equal(tierAfterPipe('D'),'C');assert.equal(tierAfterPipe(''),'C');assert.equal(tierAfterPipe('A'),'A');
+  const t=tierStats(next);assert.equal(t.total,5);assert.deepEqual(t.counts,{A:1,B:0,C:2,D:2});
+});
+test('pipe stats count conversion, losses, overdue and snoozed pipes', () => {
+  const state=emptyState();
+  state.pipes.w={id:'w',value:300,outcome:'Ganho'};state.pipes.l={id:'l',value:100,outcome:'Perdido'};state.pipes.l2={id:'l2',value:100,outcome:'Perdido'};
+  state.pipes.o={id:'o',value:50,date:'2026-09-20'};state.pipes.o2={id:'o2',value:70,date:'2026-10-02'};state.pipes.s={id:'s',value:1,snoozeUntil:'2026-10-05'};state.pipes.t={id:'t',value:1,deletedAt:'x'};
+  const s=pipeStats(state,'2026-09-28');
+  assert.equal(s.won,1);assert.equal(s.lost,2);assert.equal(Math.round(s.conversion),33);assert.equal(s.valueConversion,60);
+  assert.equal(s.open,2);assert.equal(s.overdue,1);assert.equal(s.overdueValue,50);assert.equal(s.snoozed,1);assert.equal(s.trash,1);
+  assert.equal(pipeStats(emptyState(),'2026-09-28').conversion,null);
 });
