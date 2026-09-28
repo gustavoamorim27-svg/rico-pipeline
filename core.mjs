@@ -443,16 +443,19 @@ export function postSaleOperations(state,todayIso,stamp=new Date().toISOString()
   const ops=[],gone={deletedAt:stamp,autoRemoved:true,updatedAt:stamp};
   for(const p of Object.values(state.pipes||{})){
     if(!p)continue;
+    // O próximo pós-venda fica guardado (adiado) até a data: some do quadro ao marcar Feito e volta sozinho no dia.
+    if(p.fromPv&&!p.outcome&&!p.deletedAt&&!p.autoSnoozed&&p.date>todayIso){ops.push({type:'pipes',id:p.id,patch:{snoozeUntil:p.date,autoSnoozed:true,updatedAt:stamp}});}
     const isPv=p.cat==='pv';if(!isPv&&p.fromWon)continue;
     const id=isPv?nextPostSaleId(p.id):postSaleId(p.id),cur=state.pipes[id],won=p.outcome==='Ganho'&&!p.deletedAt;
     if(!won){if(cur&&!cur.deletedAt&&!cur.outcome)ops.push({type:'pipes',id,patch:gone});continue;}
     if(cur&&!(cur.deletedAt&&cur.autoRemoved))continue;
     const at=String(p.closedAt||p.date||todayIso).slice(0,10);
     let date=businessDay(isPv?addMonthsIso(at,2):firstOfNextMonth(at));if(date<todayIso)date=businessDay(todayIso);
-    if(cur){ops.push({type:'pipes',id,patch:{deletedAt:null,autoRemoved:false,date,updatedAt:stamp}});continue;}
+    const hold=isPv&&date>todayIso?{snoozeUntil:date,autoSnoozed:true}:{};
+    if(cur){ops.push({type:'pipes',id,patch:{deletedAt:null,autoRemoved:false,date,...hold,updatedAt:stamp}});continue;}
     const base={id,clientId:p.clientId,client:p.client||state.clients?.[p.clientId]?.name||'',cat:'pv',value:0,stage:STAGES[0],date,subtype:'',origin:'',nota:5,next:'Ligar para acompanhar o pós-venda',notes:'',alloc:[],snoozeUntil:null,retired:false,createdAt:stamp,updatedAt:stamp};
     ops.push({type:'pipes',id,patch:isPv
-      ?{...base,title:p.title||'Pós-venda',soldValue:p.soldValue||0,soldCat:p.soldCat||'',soldAt:p.soldAt||at,lastPvAt:at,fromWon:p.fromWon||p.id,fromPv:p.id}
+      ?{...base,...hold,title:p.title||'Pós-venda',soldValue:p.soldValue||0,soldCat:p.soldCat||'',soldAt:p.soldAt||at,lastPvAt:at,fromWon:p.fromWon||p.id,fromPv:p.id}
       :{...base,title:`Pós-venda · ${p.title||p.subtype||SOLD_NAME[p.cat]||'negócio'}`,soldValue:Number(p.value)||0,soldCat:p.cat,soldAt:at,fromWon:p.id}});
   }
   return ops;

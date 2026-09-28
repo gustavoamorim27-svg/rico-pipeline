@@ -242,9 +242,12 @@ test('a post-sale marked done schedules the next one exactly two months later', 
   assert.deepEqual(lastPostSaleByClient(s),{});
   s=applyOperations(s,[{type:'pipes',id:'pv-w',patch:{outcome:'Ganho',closedAt:'2026-10-01T12:00:00'}}]);
   s=applyOperations(s,postSaleOperations(s,'2026-10-01','t1'));
-  const n=s.pipes['pv-w-2m'];assert.equal(n.date,'2026-12-01');assert.equal(n.cat,'pv');assert.equal(n.lastPvAt,'2026-10-01');assert.equal(n.soldAt,'2026-09-15');assert.equal(n.title,'Pós-venda · Previdência');
+  const n=s.pipes['pv-w-2m'];assert.equal(n.date,'2026-12-01');assert.equal(n.snoozeUntil,'2026-12-01');assert.equal(active(n),false);assert.equal(n.cat,'pv');assert.equal(n.lastPvAt,'2026-10-01');assert.equal(n.soldAt,'2026-09-15');assert.equal(n.title,'Pós-venda · Previdência');
   assert.deepEqual(lastPostSaleByClient(s),{a:'2026-10-01'});assert.equal(daysBetween('2026-10-01','2026-10-31'),30);
   assert.deepEqual(postSaleOperations(s,'2026-10-01'),[]);
+  const legacy=applyOperations(s,[{type:'pipes',id:'pv-w-2m',patch:{snoozeUntil:null,autoSnoozed:false}}]);
+  const fix=postSaleOperations(legacy,'2026-10-02','t9');assert.equal(fix.length,1);assert.equal(fix[0].patch.snoozeUntil,'2026-12-01');
+  assert.deepEqual(postSaleOperations(applyOperations(legacy,fix),'2026-10-02'),[]);
   s=applyOperations(s,[{type:'pipes',id:'pv-w-2m',patch:{outcome:'Ganho',closedAt:'2026-11-29T12:00:00'}}]);
   s=applyOperations(s,postSaleOperations(s,'2026-11-29','t2'));assert.equal(s.pipes['pv-w-2m-2m'].date,'2027-01-29');
   s=applyOperations(s,[{type:'pipes',id:'pv-w-2m',patch:{outcome:null}}]);s=applyOperations(s,postSaleOperations(s,'2026-11-29','t3'));

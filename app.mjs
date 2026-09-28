@@ -1,4 +1,4 @@
-import {CATEGORIES,CLASSES,COLORS,STAGES,SUBTYPES,classLabel,classColor,estimateOf,estimateOperations,rank,money,shortMoney,today,uid,escapeHTML as esc,values,emptyState,applyOperations,active,weight,weighted,monthData,migrateLegacy,legacyPayload,generateKey,validateState,importBase,pipeAssetOperations,assetPipeOperations,estimatePipeOperations,potentialPipeOperations,isRico,businessDay,isWeekend,weekendFixOperations,TIERS,tierOf,hadConversation,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,POST_SALE,postSaleOperations,lastPostSaleByClient,daysBetween} from './core.mjs';
+import {CATEGORIES,CLASSES,COLORS,STAGES,SUBTYPES,classLabel,classColor,estimateOf,estimateOperations,rank,money,shortMoney,today,uid,escapeHTML as esc,values,emptyState,applyOperations,active,weight,weighted,monthData,migrateLegacy,legacyPayload,generateKey,validateState,importBase,pipeAssetOperations,assetPipeOperations,estimatePipeOperations,potentialPipeOperations,isRico,businessDay,isWeekend,weekendFixOperations,TIERS,tierOf,hadConversation,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,POST_SALE,postSaleOperations,lastPostSaleByClient,daysBetween,addMonthsIso} from './core.mjs';
 import {VaultStore,FirestoreTransport,readLegacyLocal} from './store.mjs';
 import {RICO_LOGO_PATH,RICO_LOGO_VIEWBOX} from './logo.mjs';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
@@ -354,7 +354,7 @@ async function movePipe(id,destination,closedDate=today(),order){
   const keys=['cat','deletedAt','outcome','closedAt','retired','order','snoozeUntil','date'];const previous=Object.fromEntries(keys.map(k=>[k,p[k]??null]));
   let changes,message;
   if(destination==='trash'){changes={deletedAt:new Date().toISOString()};message='Pipe movido para a lixeira.';}
-  else if(destination==='won'||destination==='lost'){changes={outcome:destination==='won'?'Ganho':'Perdido',closedAt:(closedDate||today())+'T12:00:00',deletedAt:null,snoozeUntil:null};message=p.cat==='pv'?(destination==='won'?'Pós-venda feito.':'Pós-venda marcado como não feito.'):destination==='won'?'Negócio ganho. Meta atualizada. O pós-venda entra no dia 1 do mês que vem.':'Marcado como perdido. Fica no histórico.';}
+  else if(destination==='won'||destination==='lost'){changes={outcome:destination==='won'?'Ganho':'Perdido',closedAt:(closedDate||today())+'T12:00:00',deletedAt:null,snoozeUntil:null};message=p.cat==='pv'?(destination==='won'?`Pós-venda feito. O próximo aparece em ${dateLabel(businessDay(addMonthsIso(closedDate||today(),2))).replace(/\.$/,'')}.`:'Pós-venda marcado como não feito.'):destination==='won'?'Negócio ganho. Meta atualizada. O pós-venda entra no dia 1 do mês que vem.':'Marcado como perdido. Fica no histórico.';}
   else if(['tomorrow','week','month'].includes(destination)){const until=datePreset(destination);changes={snoozeUntil:until,date:until};message=until===addDays(1)?'Adiado para amanhã.':'Adiado para '+dateLabel(until);}
   else {changes={cat:destination,outcome:null,closedAt:null,deletedAt:null,retired:false,snoozeUntil:null,...(order===undefined?{}:{order})};message='Pipe movido para '+cats(destination).name+'.';}
   await save([patch('pipes',id,changes),...pipeAssetOperations({...p,...changes},state,today())]);notify(message,()=>save([patch('pipes',id,previous),...pipeAssetOperations({...p,...previous},state,today())]));
@@ -474,7 +474,7 @@ document.addEventListener('pointerdown',startDrag);document.addEventListener('po
 document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement||document.activeElement===document.body)window.scrollTo(0,0);},120);});
 window.addEventListener('online',()=>store?.sync());window.addEventListener('focus',()=>store?.sync());document.addEventListener('visibilitychange',()=>{if(!document.hidden)store?.sync();else if(drag)endDrag(true);});
 // Versão publicada: quando o iPad volta ao app e existe versão nova, recarrega sozinho (uma vez por versão).
-const APP_VERSION='5.15';
+const APP_VERSION='5.16';
 async function checkUpdate(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const {version}=await r.json();
   if(!version||version===APP_VERSION||dialog.open||sessionStorage.getItem('ricoCRM.reloadedFor')===version)return;
   sessionStorage.setItem('ricoCRM.reloadedFor',version);location.reload();}catch{}}
