@@ -169,17 +169,24 @@ export async function vaultCredentials(access){
   const path=await crypto.subtle.deriveBits({...params,info:new TextEncoder().encode('document')},material,256);
   return {key,id:`v3-${bytesTo64(new Uint8Array(path))}`};
 }
+// A base vai comprimida (gzip) antes de criptografar: cabe cerca de 8x mais clientes no mesmo documento.
+const streamBytes=async(bytes,stream)=>{const w=stream.writable.getWriter();w.write(bytes);w.close();return new Uint8Array(await new Response(stream.readable).arrayBuffer());};
+const canZip=()=>typeof CompressionStream==='function'&&typeof DecompressionStream==='function';
 export async function seal(value,key){
   const iv=crypto.getRandomValues(new Uint8Array(12));
-  const plain=new TextEncoder().encode(JSON.stringify(value));
+  const json=new TextEncoder().encode(JSON.stringify(value)),zip=canZip();
+  const plain=zip?await streamBytes(json,new CompressionStream('gzip')):json;
   if(plain.length>620000){const e=Error('Sua base atingiu o limite desta versão. Exporte uma cópia antes de importar mais dados.');e.code='full';throw e;}
   const encrypted=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,plain));
   let binary='';for(let i=0;i<encrypted.length;i+=8192)binary+=String.fromCharCode(...encrypted.subarray(i,i+8192));
-  return {v:1,iv:bytesTo64(iv),ciphertext:btoa(binary)};
+  return {v:zip?2:1,iv:bytesTo64(iv),ciphertext:btoa(binary)};
 }
 export async function unseal(envelope,key){
-  if(envelope?.v!==1)throw Error('Formato de base inválido.');
-  try {const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(envelope.iv)},key,from64(envelope.ciphertext));return JSON.parse(new TextDecoder().decode(plain));}
+  if(envelope?.v!==1&&envelope?.v!==2)throw Error('Formato de base inválido.');
+  if(envelope.v===2&&!canZip())throw Error('Atualize o navegador para abrir esta base.');
+  try {let plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(envelope.iv)},key,from64(envelope.ciphertext)));
+    if(envelope.v===2)plain=await streamBytes(plain,new DecompressionStream('gzip'));
+    return JSON.parse(new TextDecoder().decode(plain));}
   catch{throw Error('Não foi possível abrir a base com esta chave. Os dados locais foram preservados.');}
 }
 
@@ -261,12 +268,14 @@ export const tierOf=id=>TIERS.find(t=>t.id===id)||null;
 // Pipes que o próprio app cria (a partir de potencial, carteira ou estimativa) não significam que houve conversa.
 export const isAutoPipe=p=>!!(p&&(p.fromPotential||p.fromAsset||p.fromEstimate));
 export const hadConversation=(state,clientId)=>Object.values(state.pipes||{}).some(p=>p.clientId===clientId&&!isAutoPipe(p));
-// Sem classe ou D com pipe no histórico -> C; sem classe e sem pipe -> D. A e B nunca são rebaixados.
+// Classes: A = muito próximo (escolha sua, nunca muda sozinha); B = já fez negócio (algum pipe ganho);
+// C = já teve pipe registrado; D = ainda não interagimos. A classe só sobe sozinha, nunca é rebaixada.
 export function tierFixOperations(state){
-  const ops=[],stamp=new Date().toISOString(),talked=new Set(Object.values(state.pipes||{}).filter(p=>!isAutoPipe(p)).map(p=>p.clientId));
+  const ops=[],stamp=new Date().toISOString(),pipes=Object.values(state.pipes||{}).filter(p=>!isAutoPipe(p));
+  const won=new Set(pipes.filter(p=>p.outcome==='Ganho'&&!p.deletedAt).map(p=>p.clientId)),talked=new Set(pipes.map(p=>p.clientId));
   for(const c of Object.values(state.clients||{})){
-    if(c.deletedAt||['A','B','C'].includes(c.tier))continue;
-    const next=talked.has(c.id)?'C':'D';
+    if(c.deletedAt||c.tier==='A')continue;
+    const next=won.has(c.id)?'B':c.tier==='B'?'B':talked.has(c.id)||c.tier==='C'?'C':'D';
     if(c.tier!==next)ops.push({type:'clients',id:c.id,patch:{tier:next,updatedAt:stamp}});
   }
   return ops;

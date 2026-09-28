@@ -127,6 +127,24 @@ test('clients who had a pipe become C, the rest D, and nobody stays without a cl
   assert.equal(tierAfterPipe('D'),'C');assert.equal(tierAfterPipe(''),'C');assert.equal(tierAfterPipe('A'),'A');
   const t=tierStats(next);assert.equal(t.total,5);assert.deepEqual(t.counts,{A:1,B:0,C:2,D:2});
 });
+test('a won pipe makes the client B; A is never touched and nobody is downgraded', () => {
+  const state=emptyState();
+  for(const [id,tier] of [['a','A'],['c','C'],['d','D'],['n',''],['b','B'],['x','D']])state.clients[id]={id,name:id,tier};
+  state.pipes.w1={id:'w1',clientId:'a',cat:'cap',outcome:'Ganho'};state.pipes.w2={id:'w2',clientId:'c',cat:'seg',outcome:'Ganho'};
+  state.pipes.w3={id:'w3',clientId:'d',cat:'cap',outcome:'Ganho',retired:true};state.pipes.o={id:'o',clientId:'n',cat:'cap'};
+  state.pipes.gone={id:'gone',clientId:'x',cat:'cap',outcome:'Ganho',deletedAt:'x'};
+  const next=applyOperations(state,tierFixOperations(state));
+  assert.deepEqual(Object.fromEntries(Object.values(next.clients).map(c=>[c.id,c.tier])),{a:'A',c:'B',d:'B',n:'C',b:'B',x:'C'});
+});
+test('the vault is compressed before encryption and old envelopes still open', async () => {
+  const {key}=await vaultCredentials(generateKey());const s=emptyState();
+  for(let i=0;i<3000;i++)s.clients['c'+i]={id:'c'+i,name:'Cliente Número '+i,profile:'Não informado',tier:'D',notes:'Conta Rico · Reunião não informada',potentials:{}};
+  const env=await seal(s,key);assert.equal(env.v,2);assert.ok(env.ciphertext.length<JSON.stringify(s).length/4);
+  assert.deepEqual(await unseal(env,key),s);
+  const iv=crypto.getRandomValues(new Uint8Array(12)),raw=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(s))));
+  const v1={v:1,iv:Buffer.from(iv).toString('base64'),ciphertext:Buffer.from(raw).toString('base64')};
+  assert.deepEqual(await unseal(v1,key),s);
+});
 test('pipe stats count conversion, losses, overdue and snoozed pipes', () => {
   const state=emptyState();
   state.pipes.w={id:'w',value:300,outcome:'Ganho'};state.pipes.l={id:'l',value:100,outcome:'Perdido'};state.pipes.l2={id:'l2',value:100,outcome:'Perdido'};
