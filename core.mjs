@@ -435,18 +435,32 @@ export const postSaleId=pipeId=>`pv-${pipeId}`;
 export const firstOfNextMonth=iso=>{const d=new Date(String(iso).slice(0,10)+'T12:00:00');d.setDate(1);d.setMonth(d.getMonth()+1);return isoOf(d);};
 const SOLD_NAME={cap:'Captação',ag:'Alocação',seg:'Seguros',con:'Consórcio',rv:'Renda variável'};
 // Data: primeiro dia útil do mês seguinte ao fechamento; se já passou, o próximo dia útil a partir de hoje.
-// Se o ganho for desfeito, o pós-venda que o app criou (e ainda não foi tocado) sai do quadro.
+// Pós-venda feito -> o próximo fica marcado para exatamente 2 meses depois (dia útil).
+// Se o ganho (ou o "feito") for desfeito, o pós-venda que o app criou e ainda não foi tocado sai do quadro.
+export const addMonthsIso=(iso,n)=>{const [y,m,d]=String(iso).slice(0,10).split('-').map(Number),t=new Date(y,m-1+n,1,12),last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();t.setDate(Math.min(d,last));return isoOf(t);};
+export const nextPostSaleId=pvId=>`${pvId}-2m`;
 export function postSaleOperations(state,todayIso,stamp=new Date().toISOString()){
-  const ops=[];
+  const ops=[],gone={deletedAt:stamp,autoRemoved:true,updatedAt:stamp};
   for(const p of Object.values(state.pipes||{})){
-    if(!p||p.cat==='pv'||p.fromWon)continue;
-    const id=postSaleId(p.id),cur=state.pipes[id],won=p.outcome==='Ganho'&&!p.deletedAt;
-    if(!won){if(cur&&!cur.deletedAt&&!cur.outcome)ops.push({type:'pipes',id,patch:{deletedAt:stamp,autoRemoved:true,updatedAt:stamp}});continue;}
+    if(!p)continue;
+    const isPv=p.cat==='pv';if(!isPv&&p.fromWon)continue;
+    const id=isPv?nextPostSaleId(p.id):postSaleId(p.id),cur=state.pipes[id],won=p.outcome==='Ganho'&&!p.deletedAt;
+    if(!won){if(cur&&!cur.deletedAt&&!cur.outcome)ops.push({type:'pipes',id,patch:gone});continue;}
     if(cur&&!(cur.deletedAt&&cur.autoRemoved))continue;
-    const sold=String(p.closedAt||p.date||todayIso).slice(0,10);
-    let date=businessDay(firstOfNextMonth(sold));if(date<todayIso)date=businessDay(todayIso);
-    if(cur){ops.push({type:'pipes',id,patch:{deletedAt:null,autoRemoved:false,date,soldAt:sold,soldValue:Number(p.value)||0,updatedAt:stamp}});continue;}
-    ops.push({type:'pipes',id,patch:{id,clientId:p.clientId,client:p.client||state.clients?.[p.clientId]?.name||'',title:`Pós-venda · ${p.title||p.subtype||SOLD_NAME[p.cat]||'negócio'}`,cat:'pv',value:0,soldValue:Number(p.value)||0,soldCat:p.cat,soldAt:sold,stage:STAGES[0],date,subtype:'',origin:'',nota:5,next:'Ligar para acompanhar o pós-venda',notes:'',alloc:[],snoozeUntil:null,retired:false,fromWon:p.id,createdAt:stamp,updatedAt:stamp}});
+    const at=String(p.closedAt||p.date||todayIso).slice(0,10);
+    let date=businessDay(isPv?addMonthsIso(at,2):firstOfNextMonth(at));if(date<todayIso)date=businessDay(todayIso);
+    if(cur){ops.push({type:'pipes',id,patch:{deletedAt:null,autoRemoved:false,date,updatedAt:stamp}});continue;}
+    const base={id,clientId:p.clientId,client:p.client||state.clients?.[p.clientId]?.name||'',cat:'pv',value:0,stage:STAGES[0],date,subtype:'',origin:'',nota:5,next:'Ligar para acompanhar o pós-venda',notes:'',alloc:[],snoozeUntil:null,retired:false,createdAt:stamp,updatedAt:stamp};
+    ops.push({type:'pipes',id,patch:isPv
+      ?{...base,title:p.title||'Pós-venda',soldValue:p.soldValue||0,soldCat:p.soldCat||'',soldAt:p.soldAt||at,lastPvAt:at,fromWon:p.fromWon||p.id,fromPv:p.id}
+      :{...base,title:`Pós-venda · ${p.title||p.subtype||SOLD_NAME[p.cat]||'negócio'}`,soldValue:Number(p.value)||0,soldCat:p.cat,soldAt:at,fromWon:p.id}});
   }
   return ops;
 }
+// Último pós-venda feito de cada cliente (data) e quantos dias se passaram.
+export function lastPostSaleByClient(state){
+  const last={};
+  for(const p of Object.values(state.pipes||{}))if(p&&p.cat==='pv'&&p.outcome==='Ganho'&&!p.deletedAt){const d=String(p.closedAt||'').slice(0,10);if(d&&(!last[p.clientId]||d>last[p.clientId]))last[p.clientId]=d;}
+  return last;
+}
+export const daysBetween=(fromIso,toIso)=>Math.round((new Date(String(toIso).slice(0,10)+'T12:00:00')-new Date(String(fromIso).slice(0,10)+'T12:00:00'))/86400000);

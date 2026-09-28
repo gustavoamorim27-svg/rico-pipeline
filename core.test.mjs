@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey,postSaleOperations,pipeStats as ps2} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey,postSaleOperations,pipeStats as ps2,lastPostSaleByClient,daysBetween} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -233,4 +233,21 @@ test('every won pipe gets a post-sale pipe on the first business day of the next
   next=applyOperations(next,postSaleOperations(next,'2026-09-28','y'));assert.equal(next.pipes['pv-sep'].deletedAt,null);
   next=applyOperations(next,[{type:'pipes',id:'pv-oct',patch:{deletedAt:'z'}}]);assert.deepEqual(postSaleOperations(next,'2026-09-28'),[]);
   next=applyOperations(next,[{type:'pipes',id:'pv-old',patch:{outcome:'Ganho'}}]);assert.equal(ps2(next,'2026-09-28').won,3);
+});
+
+test('a post-sale marked done schedules the next one exactly two months later', () => {
+  const state=emptyState();state.clients.a={id:'a',name:'Ana',tier:'B'};
+  state.pipes.w={id:'w',clientId:'a',client:'Ana',title:'Previdência',cat:'cap',value:100000,outcome:'Ganho',closedAt:'2026-09-15T12:00:00'};
+  let s=applyOperations(state,postSaleOperations(state,'2026-09-28','t0'));
+  assert.deepEqual(lastPostSaleByClient(s),{});
+  s=applyOperations(s,[{type:'pipes',id:'pv-w',patch:{outcome:'Ganho',closedAt:'2026-10-01T12:00:00'}}]);
+  s=applyOperations(s,postSaleOperations(s,'2026-10-01','t1'));
+  const n=s.pipes['pv-w-2m'];assert.equal(n.date,'2026-12-01');assert.equal(n.cat,'pv');assert.equal(n.lastPvAt,'2026-10-01');assert.equal(n.soldAt,'2026-09-15');assert.equal(n.title,'Pós-venda · Previdência');
+  assert.deepEqual(lastPostSaleByClient(s),{a:'2026-10-01'});assert.equal(daysBetween('2026-10-01','2026-10-31'),30);
+  assert.deepEqual(postSaleOperations(s,'2026-10-01'),[]);
+  s=applyOperations(s,[{type:'pipes',id:'pv-w-2m',patch:{outcome:'Ganho',closedAt:'2026-11-29T12:00:00'}}]);
+  s=applyOperations(s,postSaleOperations(s,'2026-11-29','t2'));assert.equal(s.pipes['pv-w-2m-2m'].date,'2027-01-29');
+  s=applyOperations(s,[{type:'pipes',id:'pv-w-2m',patch:{outcome:null}}]);s=applyOperations(s,postSaleOperations(s,'2026-11-29','t3'));
+  assert.equal(s.pipes['pv-w-2m-2m'].deletedAt,'t3');
+  s=applyOperations(s,[{type:'pipes',id:'pv-w-2m',patch:{outcome:'Perdido'}}]);assert.deepEqual(postSaleOperations(s,'2026-11-29'),[]);
 });
