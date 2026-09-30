@@ -226,6 +226,10 @@ test('every won pipe gets a post-sale pipe on the first business day of the next
   assert.equal(ops.length,3);
   assert.equal(next.pipes['pv-sep'].date,'2026-10-01');assert.equal(next.pipes['pv-sep'].cat,'pv');assert.equal(next.pipes['pv-sep'].soldValue,100000);assert.equal(next.pipes['pv-sep'].title,'Pós-venda · Previdência');
   assert.equal(next.pipes['pv-oct'].date,'2026-11-02');assert.equal(next.pipes['pv-old'].date,'2026-09-28');
+  assert.equal(next.pipes['pv-sep'].snoozeUntil,'2026-10-01');assert.equal(next.pipes['pv-old'].snoozeUntil,null);
+  const shown=applyOperations(next,[{type:'pipes',id:'pv-sep',patch:{snoozeUntil:null,autoSnoozed:false}}]);
+  const hide=postSaleOperations(shown,'2026-09-30','h');assert.equal(hide.length,1);assert.equal(hide[0].patch.snoozeUntil,'2026-10-01');
+  assert.deepEqual(postSaleOperations(shown,'2026-10-01'),[]);
   assert.deepEqual(postSaleOperations(next,'2026-09-28'),[]);
   next=applyOperations(next,[{type:'pipes',id:'sep',patch:{outcome:null}}]);
   next=applyOperations(next,postSaleOperations(next,'2026-09-28','x'));assert.equal(next.pipes['pv-sep'].deletedAt,'x');

@@ -4365,3 +4365,38 @@ dialog::backdrop {
   font-size: 11.5px;
   padding: 4px 10px 4px 8px;
 }
+
+/* ---- Destinos do arrastar: bem maiores, fáceis de acertar com o dedo no iPad ------------------- */
+.drag-targets {
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  gap: 10px;
+}
+.drop-target {
+  min-height: 156px;
+  border-radius: 20px;
+  border-width: 2px;
+  padding: 16px 10px;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.drop-target svg {
+  width: 44px;
+  height: 44px;
+}
+.drop-target.drop-over {
+  transform: scale(1.04) translateY(-6px);
+}
+@media (max-width: 650px) {
+  .drop-target {
+    min-height: 96px;
+    font-size: 13px;
+    gap: 8px;
+  }
+  .drop-target svg {
+    width: 30px;
+    height: 30px;
+  }
+}
