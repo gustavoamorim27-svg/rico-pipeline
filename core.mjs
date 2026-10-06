@@ -112,11 +112,11 @@ export function monthData(state,month){
   const pct=(v,m)=>m>0?v/m*100:0;
   const score=(p,curve)=>{if(p<=curve[0])return 1;if(p>=curve[4])return 5;for(let i=0;i<4;i++)if(p<=curve[i+1])return i+1+(p-curve[i])/(curve[i+1]-curve[i]);return 1;};
   const components=[
-    {name:'Captação',value:cap,goal:state.settings.goals.cap,weight:.4,curve:[20,60,100,140,180]},
-    {name:'Cesta investimento',value:inv,goal:2200000,weight:.2,curve:[60,80,100,120,140]},
-    {name:'Crossell',value:points,goal:CROSS_GOAL,weight:.1,curve:[60,80,100,120,140],unit:'pts'},
-    {name:'Índice comercial',value:mm.ic??83,goal:83,weight:.1,curve:[80,90,100,110,120],unit:'%',assumed:mm.ic==null},
-    {name:'NPS',value:mm.nps??npsMeta,goal:npsMeta,weight:.2,curve:[60,80,100,120,140],unit:'',assumed:mm.nps==null}
+    {name:'Captação Líquida',value:cap,goal:state.settings.goals.cap,weight:.4,curve:[20,60,100,140,180]},
+    {name:'Cesta Investimentos',value:inv,goal:2200000,weight:.2,curve:[60,80,100,120,140]},
+    {name:'Cesta Cross Sell',value:points,goal:CROSS_GOAL,weight:.1,curve:[60,80,100,120,140],unit:'pts'},
+    {name:'NPS Assessoria',value:mm.nps??npsMeta,goal:npsMeta,weight:.2,curve:[60,80,100,120,140],unit:'',assumed:mm.nps==null},
+    {name:'Índice Comercial',value:mm.ic??83,goal:83,weight:.1,curve:[80,90,100,110,120],unit:'%',assumed:mm.ic==null}
   ].map(c=>({...c,score:score(pct(c.value,c.goal),c.curve)}));
   const pipeline={};
   for(const cat of CATEGORIES){const group=all.filter(p=>active(p)&&p.cat===cat.id&&String(p.date).slice(0,7)===month);pipeline[cat.id]={a:0,b:0,c:0};for(const p of group)pipeline[cat.id][rank(p.nota).toLowerCase()]+=weighted(p);}

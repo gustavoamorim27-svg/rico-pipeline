@@ -474,7 +474,7 @@ document.addEventListener('pointerdown',startDrag);document.addEventListener('po
 document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement||document.activeElement===document.body)window.scrollTo(0,0);},120);});
 window.addEventListener('online',()=>store?.sync());window.addEventListener('focus',()=>store?.sync());document.addEventListener('visibilitychange',()=>{if(!document.hidden)store?.sync();else if(drag)endDrag(true);});
 // Versão publicada: quando o iPad volta ao app e existe versão nova, recarrega sozinho (uma vez por versão).
-const APP_VERSION='5.18';
+const APP_VERSION='5.19';
 async function checkUpdate(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const {version}=await r.json();
   if(!version||version===APP_VERSION||dialog.open||sessionStorage.getItem('ricoCRM.reloadedFor')===version)return;
   sessionStorage.setItem('ricoCRM.reloadedFor',version);location.reload();}catch{}}
