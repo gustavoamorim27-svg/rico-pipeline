@@ -90,6 +90,13 @@ export function importBase(source,state){
   ops.summary={created,merged,renamed};
   return ops;
 }
+// Card de metas 2S2026 (Assessor · Exclusive Advisory DF II): NPS com meta mensal crescente;
+// crossell com meta 25 pts e mínimo de 10 pts em seguros (cartão sem mínimo).
+export const NPS_META={'2026-07':35,'2026-08':37.5,'2026-09':40,'2026-10':42.5,'2026-11':45,'2026-12':47.5};
+export const npsGoal=month=>NPS_META[month]??41.3;
+export const CROSS_GOAL=25, CROSS_MIN_SEG=10;
+// sem o mínimo de seguros, os demais produtos contam no máximo (meta − mínimo) pontos
+export function crossPoints(cards,con,seg){const s=(+seg||0)/1000,o=(+cards||0)+(+con||0)/10000;return s>=CROSS_MIN_SEG?s+o:s+Math.min(o,CROSS_GOAL-CROSS_MIN_SEG);}
 export const weight=p=>p.cat==='cap'&&['Previdência','STVM'].includes(p.subtype)?1.25:1;
 export const weighted=p=>(Number(p.value)||0)*weight(p);
 export const active=p=>!p.deletedAt&&!p.outcome&&!p.retired&&(!p.snoozeUntil||p.snoozeUntil<=today());
@@ -101,15 +108,15 @@ export function monthData(state,month){
   const realized={cap:sum(['cap'])+(+manual.cap||0),aloc:sum(['ag','rv'])+(+manual.aloc||0)+(+manual.rv||0),seg:sum(['seg'])+(+manual.seg||0),con:sum(['con'])+(+manual.con||0)};
   const inv=mm.ovAloc??(realized.aloc+sum(['cap'],p=>p.subtype==='Previdência'));
   const cap=mm.ovCap??realized.cap, seg=mm.ovSeg??realized.seg, con=mm.ovCon??realized.con;
-  const points=(+mm.cards||0)+con/10000+seg/1000;
+  const points=crossPoints(mm.cards,con,seg), npsMeta=npsGoal(month);
   const pct=(v,m)=>m>0?v/m*100:0;
   const score=(p,curve)=>{if(p<=curve[0])return 1;if(p>=curve[4])return 5;for(let i=0;i<4;i++)if(p<=curve[i+1])return i+1+(p-curve[i])/(curve[i+1]-curve[i]);return 1;};
   const components=[
     {name:'Captação',value:cap,goal:state.settings.goals.cap,weight:.4,curve:[20,60,100,140,180]},
     {name:'Cesta investimento',value:inv,goal:2200000,weight:.2,curve:[60,80,100,120,140]},
-    {name:'Crossell',value:points,goal:25,weight:.1,curve:[60,80,100,120,140],unit:'pts'},
+    {name:'Crossell',value:points,goal:CROSS_GOAL,weight:.1,curve:[60,80,100,120,140],unit:'pts'},
     {name:'Índice comercial',value:mm.ic??83,goal:83,weight:.1,curve:[80,90,100,110,120],unit:'%',assumed:mm.ic==null},
-    {name:'NPS',value:mm.nps??41.3,goal:41.3,weight:.2,curve:[60,80,100,120,140],unit:'',assumed:mm.nps==null}
+    {name:'NPS',value:mm.nps??npsMeta,goal:npsMeta,weight:.2,curve:[60,80,100,120,140],unit:'',assumed:mm.nps==null}
   ].map(c=>({...c,score:score(pct(c.value,c.goal),c.curve)}));
   const pipeline={};
   for(const cat of CATEGORIES){const group=all.filter(p=>active(p)&&p.cat===cat.id&&String(p.date).slice(0,7)===month);pipeline[cat.id]={a:0,b:0,c:0};for(const p of group)pipeline[cat.id][rank(p.nota).toLowerCase()]+=weighted(p);}
