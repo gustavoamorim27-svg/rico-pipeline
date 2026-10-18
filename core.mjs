@@ -474,3 +474,27 @@ export function lastPostSaleByClient(state){
   return last;
 }
 export const daysBetween=(fromIso,toIso)=>Math.round((new Date(String(toIso).slice(0,10)+'T12:00:00')-new Date(String(fromIso).slice(0,10)+'T12:00:00'))/86400000);
+
+// ---- Limpeza pela lista do Hub XP: só ficam os clientes que estão na carteira ------------------
+// Arquivo {kind:'rico-keep-list', names:[...]}: só nomes. Um cliente fica se o nome bate com algum
+// da lista (sem acento, sem o sufixo " · conta N") ou se um é a versão curta do outro (mesmo primeiro
+// nome e as palavras na ordem). Quem tem pipe registrado e não está na lista é prospect: fica,
+// a não ser que withPipes seja true. Quem sai vai para a lixeira junto com a carteira e os pipes.
+export function keepListOperations(source,state,{withPipes=false}={},stamp=new Date().toISOString()){
+  if(source?.kind!=='rico-keep-list'||!Array.isArray(source.names))throw Error('Lista de clientes inválida.');
+  const hub=source.names.map(n=>({k:nameKey(n),w:sigWords(n)})).filter(x=>x.k);
+  const keys=new Set(hub.map(x=>x.k)),byFirst=new Map();
+  for(const x of hub){if(!byFirst.has(x.w[0]))byFirst.set(x.w[0],[]);byFirst.get(x.w[0]).push(x);}
+  const inHub=c=>{const k=nameKey(c.name);if(keys.has(k))return true;const w=sigWords(c.name);if(w.length<2)return false;
+    return (byFirst.get(w[0])||[]).some(h=>h.w.length>=2&&(w.length<=h.w.length?inOrder(w,h.w):inOrder(h.w,w)));};
+  const pipes=values(state,'pipes'),talked=new Set(pipes.filter(p=>!isAutoPipe(p)).map(p=>p.clientId));
+  const clients=values(state,'clients'),out=[],prospects=[];let kept=0;
+  for(const c of clients){if(inHub(c)){kept++;continue;}if(talked.has(c.id)&&!withPipes)prospects.push(c);else out.push(c);}
+  const gone=new Set(out.map(c=>c.id)),ops=[],del={deletedAt:stamp,removedBy:'hub-list',updatedAt:stamp};
+  for(const c of out)ops.push({type:'clients',id:c.id,patch:del});
+  for(const a of values(state,'assets'))if(gone.has(a.clientId))ops.push({type:'assets',id:a.id,patch:del});
+  for(const p of pipes)if(gone.has(p.clientId))ops.push({type:'pipes',id:p.id,patch:del});
+  ops.summary={total:clients.length,kept,removed:out.length,prospects:prospects.length,
+    removedNames:out.map(c=>c.name).sort((a,b)=>a.localeCompare(b,'pt-BR')),prospectNames:prospects.map(c=>c.name).sort((a,b)=>a.localeCompare(b,'pt-BR')),after:clients.length-out.length};
+  return ops;
+}

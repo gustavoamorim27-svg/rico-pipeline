@@ -1,4 +1,4 @@
-import {CATEGORIES,CLASSES,COLORS,STAGES,SUBTYPES,classLabel,classColor,estimateOf,estimateOperations,rank,money,shortMoney,today,uid,escapeHTML as esc,values,emptyState,applyOperations,active,weight,weighted,monthData,migrateLegacy,legacyPayload,generateKey,validateState,importBase,pipeAssetOperations,assetPipeOperations,estimatePipeOperations,potentialPipeOperations,isRico,businessDay,isWeekend,weekendFixOperations,TIERS,tierOf,hadConversation,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,POST_SALE,postSaleOperations,lastPostSaleByClient,daysBetween,addMonthsIso} from './core.mjs';
+import {CATEGORIES,CLASSES,COLORS,STAGES,SUBTYPES,classLabel,classColor,estimateOf,estimateOperations,rank,money,shortMoney,today,uid,escapeHTML as esc,values,emptyState,applyOperations,active,weight,weighted,monthData,migrateLegacy,legacyPayload,generateKey,validateState,importBase,pipeAssetOperations,assetPipeOperations,estimatePipeOperations,potentialPipeOperations,isRico,businessDay,isWeekend,weekendFixOperations,TIERS,tierOf,hadConversation,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,POST_SALE,postSaleOperations,lastPostSaleByClient,daysBetween,addMonthsIso,keepListOperations} from './core.mjs';
 import {VaultStore,FirestoreTransport,readLegacyLocal} from './store.mjs';
 import {RICO_LOGO_PATH,RICO_LOGO_VIEWBOX} from './logo.mjs';
 const $=s=>document.querySelector(s), app=$('#app'), dialog=$('#dialog');
@@ -362,6 +362,20 @@ async function movePipe(id,destination,closedDate=today(),order){
 function editGoals(){const g=state.settings.goals;showModal('Metas mensais',`<div class="fields">${CATEGORIES.map(c=>field(c.name+' (R$)',c.id,g[c.id==='ag'?'aloc':c.id],'number',false,'min="0" step="0.01" required')).join('')}<p class="small muted field full">A meta da cesta MEREO continua em R$ 2,2 mi, conforme o app anterior. As metas acima controlam os cartões mensais.</p></div>`,async f=>{await save(patch('settings','goals',Object.fromEntries(CATEGORIES.map(c=>[c.id==='ag'?'aloc':c.id,Number(f.get(c.id))]))));notify('Metas atualizadas.');});}
 function editResults(){const m=monthData(state,month);showModal('Realizado · '+monthLabel(),`<div class="fields"><p class="small muted field full">Os valores abaixo são adicionais aos pipes ganhos. Para o MEREO, os campos de substituição são opcionais.</p>${CATEGORIES.map(c=>field(c.name+' adicional (R$)',c.id,m.manual[c.id==='ag'?'aloc':c.id]||0,'number',false,'step="0.01"')).join('')}${field('Cartões (pontos)','cards',m.mm.cards||0,'number',false,'min="0" step="1"')}${field('Índice comercial (%)','ic',m.mm.ic??'','number',false,'min="0" max="100" step="0.01"')}${field('NPS','nps',m.mm.nps??'','number',false,'min="-100" max="100" step="0.01"')}<span></span>${[['ovCap','Substituir captação MEREO'],['ovAloc','Substituir alocação MEREO'],['ovSeg','Substituir seguros MEREO'],['ovCon','Substituir consórcio MEREO']].map(([k,t])=>field(t+' (R$)',k,m.mm[k]??'','number',false,'step="0.01"')).join('')}</div>`,async f=>{const manual={...m.manual,...Object.fromEntries(CATEGORIES.map(c=>[c.id==='ag'?'aloc':c.id,Number(f.get(c.id))]))},mm={...m.mm};for(const k of ['cards','ic','nps','ovCap','ovAloc','ovSeg','ovCon'])mm[k]=f.get(k)===''?null:Number(f.get(k));await save([patch('settings','manual',{[m.key]:manual}),patch('settings','mereo',{[m.key]:mm})]);notify('Resultados atualizados.');});}
 async function importSource(source){
+  // Lista do Hub XP: só ficam os clientes da carteira (e, se quiser, os prospects com pipe).
+  if(source?.kind==='rico-keep-list'){const sm=keepListOperations(source,state).summary;
+    const list=(names,cls)=>names.length?`<div class="merge-list keep-list ${cls}">${names.map(n=>`<span>${esc(n)}</span>`).join('')}</div>`:'<p class="muted small">Nenhum.</p>';
+    showModal('Limpar pela lista do Hub',`<div class="notice">${icon('shield')}<span>Ficam só os clientes que estão na sua carteira no Hub XP. Quem sai vai para a lixeira com a carteira e os pipes e some de todas as telas.</span></div>
+<p class="notes"><b>${sm.total} → <span data-keep-after>${sm.after}</span> clientes</b><br>${sm.kept} estão na lista do Hub · <span data-keep-out>${sm.removed}</span> saem${sm.prospects?` · ${sm.prospects} prospects com pipe fora do Hub`:''}</p>
+${sm.prospects?`<label class="field-check" style="margin:6px 0 14px"><input type="checkbox" name="withPipes" data-keep-toggle> Remover também os ${sm.prospects} prospects com pipe (não estão no Hub)</label>`:''}
+<div class="eyebrow" style="margin:6px 0 8px">Saem (${sm.removed})</div>${list(sm.removedNames,'out')}
+${sm.prospects?`<div class="eyebrow" style="margin:14px 0 8px">Prospects com pipe (${sm.prospects})</div>${list(sm.prospectNames,'pros')}`:''}`,async f=>{
+      const ops=keepListOperations(source,state,{withPipes:f.get('withPipes')==='on'}),n=ops.summary.removed;
+      if(!n){notify('Nada a remover: todos estão na lista do Hub.');return;}
+      await save(ops);notify(`${n} ${n===1?'cliente removido':'clientes removidos'}. Agora são ${ops.summary.after}.`);},'Remover quem não está no Hub');
+    const t=$('[data-keep-toggle]');if(t)t.addEventListener('change',()=>{const out=sm.removed+(t.checked?sm.prospects:0);$('[data-keep-out]').textContent=out;$('[data-keep-after]').textContent=sm.total-out;});
+    return;
+  }
   // Arquivo único com a planilha e o Hub: aplica as partes em sequência e mostra o resultado final antes de gravar.
   if(source?.kind==='rico-bundle'&&Array.isArray(source.parts)){let tmp=state;const all=[];let sb=null,sc=null;
     for(const part of source.parts){let ops;if(part?.version===3){ops=importBase(part,tmp);sb=ops.summary;}else if(part?.kind==='rico-custody'){ops=custodyOperations(part,tmp);sc=ops.summary;}else continue;all.push(...ops);tmp=applyOperations(tmp,ops);}
@@ -474,7 +488,7 @@ document.addEventListener('pointerdown',startDrag);document.addEventListener('po
 document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement||document.activeElement===document.body)window.scrollTo(0,0);},120);});
 window.addEventListener('online',()=>store?.sync());window.addEventListener('focus',()=>store?.sync());document.addEventListener('visibilitychange',()=>{if(!document.hidden)store?.sync();else if(drag)endDrag(true);});
 // Versão publicada: quando o iPad volta ao app e existe versão nova, recarrega sozinho (uma vez por versão).
-const APP_VERSION='5.19';
+const APP_VERSION='5.20';
 async function checkUpdate(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const {version}=await r.json();
   if(!version||version===APP_VERSION||dialog.open||sessionStorage.getItem('ricoCRM.reloadedFor')===version)return;
   sessionStorage.setItem('ricoCRM.reloadedFor',version);location.reload();}catch{}}

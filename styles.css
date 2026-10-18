@@ -4400,3 +4400,23 @@ dialog::backdrop {
     height: 30px;
   }
 }
+
+/* ---- Limpeza pela lista do Hub: nomes que saem ------------------------------------------------- */
+.keep-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 30vh;
+}
+.keep-list span {
+  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 122, 122, 0.35);
+  background: rgba(255, 122, 122, 0.08);
+  color: var(--text);
+}
+.keep-list.pros span {
+  border-color: rgba(113, 153, 255, 0.35);
+  background: rgba(113, 153, 255, 0.08);
+}

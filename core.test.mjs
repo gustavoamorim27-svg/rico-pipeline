@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey,postSaleOperations,pipeStats as ps2,lastPostSaleByClient,daysBetween} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey,postSaleOperations,pipeStats as ps2,lastPostSaleByClient,daysBetween,keepListOperations} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -264,3 +264,16 @@ test('MEREO 2S2026: NPS meta mensal e mínimo de seguros no crossell',()=>{const
   const m=monthData(s,'2026-10');const nps=m.components.find(c=>c.name==='NPS Assessoria'),cr=m.components.find(c=>c.name==='Cesta Cross Sell');
   assert.equal(nps.goal,42.5);assert.equal(nps.value,42.5);assert.equal(cr.value,2+15);
   s.settings.mereo['2026-9'].ovSeg=10000;assert.equal(monthData(s,'2026-10').components.find(c=>c.name==='Cesta Cross Sell').value,40);});
+
+test('cleaning by the Hub list keeps Hub clients and prospects with pipes, and removes the rest', () => {
+  const s=emptyState();const add=(id,name)=>s.clients[id]={id,name,tier:'D'};
+  add('a','João da Silva');add('b','Alberto Willy');add('c','Fora da Lista');add('d','Prospect Novo');add('e','Mirza Cunha · conta 9');add('f','Ana Carolina Toledo Martins');
+  s.pipes.p={id:'p',clientId:'d',cat:'cap',value:1};s.pipes.q={id:'q',clientId:'c',cat:'seg',fromPotential:true};
+  s.assets.x={id:'x',clientId:'c',institution:'Rico',name:'Custódia na Rico',value:10};s.assets.y={id:'y',clientId:'a',institution:'Rico',value:5};
+  const src={kind:'rico-keep-list',names:['JOAO DA SILVA','ALBERTO WILLY BERNARDI','MIRZA CUNHA','ANA CAROLINA TOLEDO']};
+  const ops=keepListOperations(src,s,{},'t');
+  assert.deepEqual({...ops.summary,removedNames:undefined,prospectNames:undefined},{total:6,kept:4,removed:1,prospects:1,after:5,removedNames:undefined,prospectNames:undefined});
+  assert.deepEqual(ops.summary.removedNames,['Fora da Lista']);assert.deepEqual(ops.summary.prospectNames,['Prospect Novo']);
+  const n=applyOperations(s,ops);assert.equal(n.clients.c.deletedAt,'t');assert.equal(n.assets.x.deletedAt,'t');assert.equal(n.pipes.q.deletedAt,'t');assert.equal(n.assets.y.deletedAt,undefined);
+  const all=keepListOperations(src,s,{withPipes:true},'t');assert.equal(all.summary.removed,2);assert.equal(applyOperations(s,all).pipes.p.deletedAt,'t');
+});
