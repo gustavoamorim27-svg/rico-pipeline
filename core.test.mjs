@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey,postSaleOperations,pipeStats as ps2,lastPostSaleByClient,daysBetween,keepListOperations} from './core.mjs';
+import {emptyState,migrateLegacy,legacyPayload,applyOperations,values,active,weight,monthData,generateKey,vaultCredentials,seal,unseal,validateState,classLabel,importBase,pipeAssetOperations,assetPipeOperations,potentialPipeOperations,estimatePipeOperations,businessDay,weekendFixOperations,tierFixOperations,tierAfterPipe,tierStats,pipeStats,custodyOperations,similarClientGroups,mergeClientOperations,mergeKey,postSaleOperations,pipeStats as ps2,lastPostSaleByClient,daysBetween,keepListOperations,contactPatch,CONTACT_STEPS} from './core.mjs';
 import {VaultStore} from './store.mjs';
 import * as core from './core.mjs';
 const original={id:'123',client:'Maria Exemplo',cat:'cap',value:200000,nota:8,stage:'Negociação',subtype:'STVM',date:'2026-09-20',next:'Telefonar',notes:'Saldo informado no C6.',alloc:['RF'],snoozeUntil:'2026-09-15',archivedAt:'2026-09-01T12:00:00Z',customLegacyField:'preservar'};
@@ -276,4 +276,12 @@ test('cleaning by the Hub list keeps Hub clients and prospects with pipes, and r
   assert.deepEqual(ops.summary.removedNames,['Fora da Lista']);assert.deepEqual(ops.summary.prospectNames,['Prospect Novo']);
   const n=applyOperations(s,ops);assert.equal(n.clients.c.deletedAt,'t');assert.equal(n.assets.x.deletedAt,'t');assert.equal(n.pipes.q.deletedAt,'t');assert.equal(n.assets.y.deletedAt,undefined);
   const all=keepListOperations(src,s,{withPipes:true},'t');assert.equal(all.summary.removed,2);assert.equal(applyOperations(s,all).pipes.p.deletedAt,'t');
+});
+
+test('each contact pushes the pipe forward 2, 5, 8, 11, 15 and then 30 days, on business days', () => {
+  let p={id:'p',cat:'cap'};const seen=[];let day='2026-10-19';
+  for(let i=0;i<8;i++){const c=contactPatch(p,day,'t');seen.push(c._days);assert.equal(c.contacts,i+1);assert.equal(c.lastContactAt,day);assert.equal(c.snoozeUntil,c.date);
+    assert.ok(![0,6].includes(new Date(c.date+'T12:00:00').getDay()));p={...p,...c};day=c.date;}
+  assert.deepEqual(seen,[2,5,8,11,15,30,30,30]);assert.equal(p.contactLog.length,8);
+  assert.equal(contactPatch({},'2026-10-19').date,'2026-10-21');assert.equal(contactPatch({contacts:1},'2026-10-21').date,'2026-10-26');
 });

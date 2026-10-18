@@ -498,3 +498,13 @@ export function keepListOperations(source,state,{withPipes=false}={},stamp=new D
     removedNames:out.map(c=>c.name).sort((a,b)=>a.localeCompare(b,'pt-BR')),prospectNames:prospects.map(c=>c.name).sort((a,b)=>a.localeCompare(b,'pt-BR')),after:clients.length-out.length};
   return ops;
 }
+
+// ---- Follow-up: "Contatado" joga o pipe para frente numa régua progressiva -----------------------
+// 1º contato: volta em 2 dias; depois 5, 8, 11, 15 e daí em diante 30 dias (sempre dia útil).
+export const CONTACT_STEPS=[2,5,8,11,15,30];
+export const addDaysIso=(iso,n)=>{const d=new Date(String(iso).slice(0,10)+'T12:00:00');d.setDate(d.getDate()+n);return isoOf(d);};
+export function contactPatch(p,todayIso,stamp=new Date().toISOString()){
+  const n=(Number(p?.contacts)||0)+1,days=CONTACT_STEPS[Math.min(n,CONTACT_STEPS.length)-1],until=businessDay(addDaysIso(todayIso,days));
+  return {contacts:n,lastContactAt:todayIso,contactLog:[...(Array.isArray(p?.contactLog)?p.contactLog:[]),todayIso],snoozeUntil:until,date:until,updatedAt:stamp,_days:days};
+}
+export const nextContactDays=p=>CONTACT_STEPS[Math.min((Number(p?.contacts)||0)+1,CONTACT_STEPS.length)-1];
